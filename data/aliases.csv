@@ -1,0 +1,34 @@
+alias_type,alias,make,model,variant
+make,BMW,BMW,,
+make,B.M.W.,BMW,,
+make,Merc,Mercedes-Benz,,
+make,Mercedes,Mercedes-Benz,,
+make,Benz,Mercedes-Benz,,
+make,Audi,Audi,,
+make,Toyota,Toyota,,
+make,Honda,Honda,,
+make,Hyundai,Hyundai,,
+make,Volkswagen,Volkswagen,,
+make,VW,Volkswagen,,
+make,Skoda,Skoda,,
+make,Kia,Kia,,
+make,Ford,Ford,,
+make,Nissan,Nissan,,
+make,MG,MG,,
+make,Tata,Tata,,
+make,Mahindra,Mahindra,,
+model,C Class,Mercedes-Benz,C-Class,
+model,E Class,Mercedes-Benz,E-Class,
+model,BMW 3 Series,BMW,3 Series,
+model,BMW 5 Series,BMW,5 Series,
+model,Innova,Toyota,Innova Crysta,
+model,City Sedan,Honda,City,
+model,Hyundai Creta,Hyundai,Creta,
+model,Volkswagen Virtus,Volkswagen,Virtus,
+model,Skoda Kushaq,Skoda,Kushaq,
+variant,amg,Mercedes-Benz,C-Class,AMG C43
+variant,4x4 AT,Toyota,Fortuner,4x4
+variant,Automatic,BMW,3 Series,330i
+variant,SX (O),Hyundai,Creta,SX(O)
+variant,ds,Volkswagen,Virtus,GT
+variant,DSG,Volkswagen,Taigun,GT

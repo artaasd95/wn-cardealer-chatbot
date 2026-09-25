@@ -1,0 +1,157 @@
+car_id,make,model,variant,year,fuel_type,transmission,body_type,price_min,price_max,mileage_km,features,dealer_id
+C-0001,BMW,3 Series,320i,2019,Petrol,Automatic,Sedan,3500000,3690000,57000,Cruise control;Push-button start;LED headlights;Keyless entry,D-011
+C-0002,BMW,3 Series,320i,2020,Petrol,Automatic,Sedan,3500000,3830000,74000,Keyless entry;Electronic stability control;Auto climate control,D-009
+C-0003,BMW,3 Series,320i,2021,Petrol,Automatic,Sedan,3500000,4100000,58000,Touchscreen infotainment;Alloy wheels;Push-button start;Sunroof;Electronic stability control,D-003
+C-0004,BMW,3 Series,330i,2019,Petrol,Automatic,Sedan,4600000,5460000,33000,Alloy wheels;Touchscreen infotainment;Hill assist;Cruise control,D-002
+C-0005,BMW,3 Series,330i,2020,Petrol,Automatic,Sedan,4600000,5010000,41000,Push-button start;Touchscreen infotainment;Hill assist,D-002
+C-0006,BMW,3 Series,330i,2021,Petrol,Automatic,Sedan,4600000,5370000,29000,Sunroof;Auto climate control;Keyless entry;LED headlights,D-014
+C-0007,BMW,3 Series,M340i,2019,Petrol,Automatic,Sedan,7500000,8300000,56000,Apple CarPlay;LED headlights;Touchscreen infotainment,D-001
+C-0008,BMW,3 Series,M340i,2020,Petrol,Automatic,Sedan,7500000,8860000,66000,Android Auto;Electronic stability control;Leather seats,D-002
+C-0009,BMW,3 Series,M340i,2021,Petrol,Automatic,Sedan,7500000,8440000,58000,Leather seats;Cruise control;Alloy wheels,D-007
+C-0010,BMW,5 Series,520i,2021,Petrol,Automatic,Sedan,5800000,6190000,53000,Electronic stability control;LED headlights;Apple CarPlay;Alloy wheels;Leather seats;Hill assist,D-011
+C-0011,BMW,5 Series,530i,2021,Petrol,Automatic,Sedan,7200000,7920000,53000,LED headlights;Android Auto;Auto climate control,D-008
+C-0012,BMW,X1,sDrive18d,2023,Diesel,Automatic,SUV,3900000,4360000,29000,Ambient lighting;Hill descent control;Touchscreen infotainment;Roof rails;Leather seats;Towing package,D-005
+C-0013,BMW,X1,xDrive20i,2023,Petrol,Automatic,SUV,4800000,5560000,16000,Touchscreen infotainment;Alloy wheels;Hill descent control;Ambient lighting,D-001
+C-0014,BMW,X3,xDrive20d,2020,Diesel,Automatic,SUV,6200000,7300000,61000,Sunroof;Touchscreen infotainment;Hill descent control;Towing package,D-010
+C-0015,BMW,X3,xDrive30i,2020,Petrol,Automatic,SUV,7800000,9170000,45000,Rear camera;Alloy wheels;Roof rails;Towing package;Hill descent control;All-wheel drive,D-004
+C-0016,BMW,X5,xDrive40i,2022,Petrol,Automatic,SUV,10200000,11190000,34000,Cruise control;Roof rails;Hill descent control;Apple CarPlay;Alloy wheels,D-001
+C-0017,BMW,X5,M50d,2022,Diesel,Automatic,SUV,11800000,13710000,43000,Hill descent control;Towing package;Cruise control,D-009
+C-0018,BMW,Z4,sDrive20i,2019,Petrol,Automatic,Convertible,6900000,7510000,57000,Rain-sensing wipers;Dual-zone climate;Touchscreen infotainment;Sport suspension;Ambient lighting,D-010
+C-0019,BMW,Z4,sDrive20i,2020,Petrol,Automatic,Convertible,6900000,7360000,63000,Dual-zone climate;Sport suspension;Wind deflector;Alloy wheels;Leather seats,D-004
+C-0020,BMW,Z4,M40i,2019,Petrol,Automatic,Convertible,9100000,10520000,31000,Sport suspension;Leather seats;Dual-zone climate,D-005
+C-0021,BMW,Z4,M40i,2020,Petrol,Automatic,Convertible,9100000,9770000,71000,Leather seats;Dual-zone climate;Sport suspension;Touchscreen infotainment;Ambient lighting,D-011
+C-0022,Mercedes-Benz,C-Class,C220d,2021,Diesel,Automatic,Sedan,5400000,5790000,20000,Apple CarPlay;Touchscreen infotainment;LED headlights;Keyless entry,D-010
+C-0023,Mercedes-Benz,C-Class,C300,2021,Petrol,Automatic,Sedan,6200000,6530000,55000,Android Auto;LED headlights;Alloy wheels;Push-button start;Sunroof,D-009
+C-0024,Mercedes-Benz,C-Class,AMG C43,2021,Petrol,Automatic,Sedan,8500000,9240000,41000,Android Auto;Hill assist;Alloy wheels;Rear camera,D-001
+C-0025,Mercedes-Benz,E-Class,E220d,2023,Diesel,Automatic,Sedan,6800000,7730000,27000,Hill assist;LED headlights;Electronic stability control;Alloy wheels;Rear camera;Sunroof,D-006
+C-0026,Mercedes-Benz,E-Class,E300,2023,Petrol,Automatic,Sedan,7900000,8500000,29000,Apple CarPlay;Cruise control;Leather seats,D-002
+C-0027,Mercedes-Benz,GLC,GLC 220d,2020,Diesel,Automatic,SUV,7200000,8630000,57000,Touchscreen infotainment;Electronic parking brake;Roof rails;Apple CarPlay;Leather seats;Towing package,D-007
+C-0028,Mercedes-Benz,GLC,GLC 300,2020,Petrol,Automatic,SUV,8800000,9350000,36000,Apple CarPlay;Towing package;Hill descent control;Leather seats;All-wheel drive,D-008
+C-0029,Mercedes-Benz,GLE,GLE 300d,2022,Diesel,Automatic,SUV,9500000,10480000,29000,Apple CarPlay;Roof rails;Leather seats;Electronic parking brake,D-008
+C-0030,Mercedes-Benz,GLE,GLE 450,2022,Petrol,Automatic,SUV,12100000,14260000,40000,Cruise control;Sunroof;Towing package;Leather seats;Android Auto;Roof rails,D-004
+C-0031,Mercedes-Benz,A-Class,A200,2019,Petrol,DCT,Hatchback,4200000,4460000,79000,Rear camera;Touchscreen infotainment;LED DRLs;Apple CarPlay;Keyless entry,D-003
+C-0032,Mercedes-Benz,A-Class,A200,2020,Petrol,DCT,Hatchback,4200000,4970000,51000,Keyless entry;LED DRLs;Cruise control;Rear camera;Alloy wheels;Touchscreen infotainment,D-014
+C-0033,Mercedes-Benz,A-Class,AMG A35,2019,Petrol,DCT,Hatchback,6700000,7460000,76000,Cruise control;Auto climate control;Touchscreen infotainment;Push-button start;LED DRLs;Keyless entry,D-007
+C-0034,Mercedes-Benz,A-Class,AMG A35,2020,Petrol,DCT,Hatchback,6700000,7390000,68000,Keyless entry;Apple CarPlay;Touchscreen infotainment;Push-button start;Alloy wheels;Rear camera,D-008
+C-0035,Audi,A3,35 TFSI,2021,Petrol,DCT,Sedan,4200000,4680000,33000,Sunroof;Keyless entry;Push-button start;Electronic stability control;Rear camera;Cruise control,D-005
+C-0036,Audi,A3,40 TFSI,2021,Petrol,DCT,Sedan,5100000,5580000,59000,LED headlights;Auto climate control;Electronic stability control,D-002
+C-0037,Audi,A4,35 TFSI,2023,Petrol,DCT,Sedan,5600000,6400000,16000,Sunroof;Android Auto;LED headlights;Rear camera,D-004
+C-0038,Audi,A4,45 TFSI,2023,Petrol,DCT,Sedan,7100000,7860000,16000,Touchscreen infotainment;Apple CarPlay;Rear camera;Hill assist,D-009
+C-0039,Audi,Q5,40 TDI,2020,Diesel,Automatic,SUV,6300000,7480000,61000,Cruise control;Electronic parking brake;Leather seats;Hill descent control;Touchscreen infotainment;Alloy wheels,D-003
+C-0040,Audi,Q5,45 TFSI,2020,Petrol,Automatic,SUV,7400000,8850000,73000,Android Auto;Rear camera;Leather seats;Touchscreen infotainment;All-wheel drive;Towing package,D-005
+C-0041,Audi,Q7,45 TDI,2022,Diesel,Automatic,SUV,8900000,9880000,43000,Android Auto;Leather seats;Ambient lighting;Sunroof;Cruise control,D-004
+C-0042,Audi,Q7,45 TDI,2024,Diesel,Automatic,SUV,8900000,10410000,5000,Touchscreen infotainment;Ambient lighting;Sunroof;All-wheel drive,D-014
+C-0043,Audi,Q7,55 TFSI,2022,Petrol,Automatic,SUV,10500000,11270000,23000,Sunroof;Roof rails;Electronic parking brake;Rear camera;All-wheel drive,D-002
+C-0044,Audi,Q7,55 TFSI,2024,Petrol,Automatic,SUV,10500000,11100000,5000,Electronic parking brake;Ambient lighting;Towing package;Sunroof,D-009
+C-0045,Toyota,Innova Crysta,GX,2019,Diesel,Manual,Minivan,1900000,2060000,81000,Apple CarPlay;Rear camera;Cabin air filter,D-005
+C-0046,Toyota,Innova Crysta,GX,2020,Diesel,Manual,Minivan,1900000,2080000,58000,Power sliding doors;Rear entertainment;Rear camera;Apple CarPlay;Multiple USB ports;Touchscreen infotainment,D-002
+C-0047,Toyota,Innova Crysta,VX,2019,Diesel,Automatic,Minivan,2600000,2780000,60000,Rear camera;Multiple USB ports;Rear entertainment;Apple CarPlay;Touchscreen infotainment;Cabin air filter,D-003
+C-0048,Toyota,Innova Crysta,VX,2020,Diesel,Automatic,Minivan,2600000,3030000,26000,Touchscreen infotainment;Cabin air filter;Apple CarPlay;Third-row seating;Power sliding doors;Rear entertainment,D-003
+C-0049,Toyota,Innova Crysta,ZX,2019,Diesel,Automatic,Minivan,2900000,3280000,81000,Multiple USB ports;Touchscreen infotainment;Cabin air filter;Rear camera;Third-row seating;Power sliding doors,D-007
+C-0050,Toyota,Innova Crysta,ZX,2020,Diesel,Automatic,Minivan,2900000,3270000,58000,Rear entertainment;Multiple USB ports;Touchscreen infotainment;Rear camera;Power sliding doors,D-012
+C-0051,Toyota,Fortuner,4x2,2021,Diesel,Automatic,SUV,3300000,3800000,44000,Cruise control;Android Auto;Sunroof;Rear camera;Towing package,D-003
+C-0052,Toyota,Fortuner,4x4,2021,Diesel,Automatic,SUV,4100000,4700000,32000,Touchscreen infotainment;Sunroof;Apple CarPlay;Rear camera,D-008
+C-0053,Toyota,Camry,HEV,2023,Hybrid,CVT,Sedan,4500000,5330000,17000,Android Auto;Auto climate control;Rear camera;Keyless entry,D-011
+C-0054,Toyota,Glanza,G,2020,Petrol,Manual,Hatchback,790000,930000,62000,Cruise control;Touchscreen infotainment;Keyless entry,D-004
+C-0055,Toyota,Glanza,V,2020,Petrol,CVT,Hatchback,940000,1010000,26000,Cruise control;Keyless entry;Push-button start;LED DRLs,D-007
+C-0056,Toyota,Hilux,4x4 MT,2022,Diesel,Manual,Pickup,3300000,3640000,33000,Alloy wheels;All-wheel drive;Bed liner;Towing package;Cruise control;Hill descent control,D-012
+C-0057,Toyota,Hilux,4x4 AT,2022,Diesel,Automatic,Pickup,3800000,4480000,42000,Towing package;Cruise control;Touchscreen infotainment,D-014
+C-0058,Honda,City,V,2019,Petrol,Manual,Sedan,1180000,1390000,78000,Hill assist;Keyless entry;Rear camera;Sunroof;Touchscreen infotainment;Auto climate control,D-009
+C-0059,Honda,City,V,2020,Petrol,Manual,Sedan,1180000,1260000,62000,Android Auto;LED headlights;Cruise control,D-007
+C-0060,Honda,City,VX,2019,Petrol,CVT,Sedan,1400000,1540000,33000,Keyless entry;Touchscreen infotainment;Sunroof;Apple CarPlay;Auto climate control;Electronic stability control,D-014
+C-0061,Honda,City,VX,2020,Petrol,CVT,Sedan,1400000,1560000,56000,LED headlights;Leather seats;Auto climate control;Sunroof;Keyless entry;Alloy wheels,D-011
+C-0062,Honda,City,ZX,2019,Petrol,CVT,Sedan,1620000,1880000,38000,Keyless entry;Cruise control;Hill assist;Apple CarPlay;Push-button start;Alloy wheels,D-008
+C-0063,Honda,City,ZX,2020,Petrol,CVT,Sedan,1620000,1910000,29000,Leather seats;Cruise control;Touchscreen infotainment;Rear camera;Electronic stability control,D-003
+C-0064,Honda,Amaze,E,2021,Petrol,Manual,Sedan,810000,960000,32000,Alloy wheels;Electronic stability control;Cruise control;LED headlights;Touchscreen infotainment;Auto climate control,D-005
+C-0065,Honda,Amaze,E,2023,Petrol,Manual,Sedan,810000,900000,15000,Rear camera;Android Auto;Alloy wheels;Electronic stability control;LED headlights;Apple CarPlay,D-012
+C-0066,Honda,Amaze,VX,2021,Petrol,CVT,Sedan,1100000,1300000,22000,Apple CarPlay;Push-button start;Auto climate control;Hill assist,D-009
+C-0067,Honda,Amaze,VX,2023,Petrol,CVT,Sedan,1100000,1290000,17000,Push-button start;Sunroof;Android Auto;Alloy wheels,D-001
+C-0068,Honda,Elevate,V,2023,Petrol,Manual,SUV,1100000,1230000,29000,Hill descent control;Touchscreen infotainment;All-wheel drive,D-006
+C-0069,Honda,Elevate,ZX,2023,Petrol,CVT,SUV,1500000,1630000,20000,Electronic parking brake;Leather seats;All-wheel drive;Hill descent control,D-007
+C-0070,Honda,WR-V,SV,2020,Petrol,Manual,SUV,900000,1020000,51000,Ambient lighting;Android Auto;Alloy wheels,D-008
+C-0071,Honda,WR-V,VX,2020,Petrol,CVT,SUV,1200000,1300000,68000,Towing package;Cruise control;Leather seats,D-004
+C-0072,Hyundai,Creta,E,2022,Petrol,Manual,SUV,1100000,1270000,26000,Hill descent control;Cruise control;Ambient lighting;Touchscreen infotainment;Rear camera,D-007
+C-0073,Hyundai,Creta,S,2022,Petrol,Manual,SUV,1300000,1420000,33000,Leather seats;Rear camera;Ambient lighting,D-010
+C-0074,Hyundai,Creta,SX,2022,Petrol,Automatic,SUV,1700000,1910000,44000,Hill descent control;Roof rails;Electronic parking brake,D-006
+C-0075,Hyundai,Creta,SX(O),2022,Diesel,Automatic,SUV,2000000,2310000,37000,Electronic parking brake;Leather seats;Roof rails;Apple CarPlay;Alloy wheels,D-010
+C-0076,Hyundai,Verna,S,2019,Petrol,Manual,Sedan,1100000,1230000,51000,Electronic stability control;Push-button start;Touchscreen infotainment;Alloy wheels;Apple CarPlay;Auto climate control,D-008
+C-0077,Hyundai,Verna,S,2020,Petrol,Manual,Sedan,1100000,1230000,75000,Touchscreen infotainment;Electronic stability control;Keyless entry;Sunroof;Hill assist;Alloy wheels,D-012
+C-0078,Hyundai,Verna,SX,2019,Petrol,CVT,Sedan,1500000,1600000,53000,Push-button start;Android Auto;Keyless entry;Touchscreen infotainment;Auto climate control,D-014
+C-0079,Hyundai,Verna,SX,2020,Petrol,CVT,Sedan,1500000,1610000,49000,LED headlights;Keyless entry;Leather seats;Alloy wheels;Android Auto;Touchscreen infotainment,D-004
+C-0080,Hyundai,Tucson,PL,2021,Petrol,Automatic,SUV,2750000,3270000,26000,Hill descent control;Towing package;Apple CarPlay,D-001
+C-0081,Hyundai,Tucson,GLS,2021,Diesel,Automatic,SUV,3100000,3530000,34000,Hill descent control;Roof rails;Apple CarPlay;Android Auto,D-003
+C-0082,Hyundai,i20,Magna,2023,Petrol,Manual,Hatchback,750000,820000,14000,Keyless entry;Apple CarPlay;LED DRLs;Touchscreen infotainment,D-008
+C-0083,Hyundai,i20,Asta,2023,Petrol,DCT,Hatchback,1100000,1200000,17000,Keyless entry;Touchscreen infotainment;LED DRLs;Push-button start;Apple CarPlay;Cruise control,D-004
+C-0084,Volkswagen,Virtus,Comfortline,2020,Petrol,Manual,Sedan,1120000,1240000,39000,Android Auto;LED headlights;Cruise control,D-009
+C-0085,Volkswagen,Virtus,Comfortline,2022,Petrol,Manual,Sedan,1120000,1240000,40000,Auto climate control;Touchscreen infotainment;Keyless entry,D-007
+C-0086,Volkswagen,Virtus,Highline,2020,Petrol,Automatic,Sedan,1470000,1720000,69000,Cruise control;Leather seats;LED headlights;Push-button start;Electronic stability control,D-010
+C-0087,Volkswagen,Virtus,Highline,2022,Petrol,Automatic,Sedan,1470000,1630000,29000,Electronic stability control;LED headlights;Leather seats;Rear camera;Touchscreen infotainment;Push-button start,D-002
+C-0088,Volkswagen,Virtus,GT,2020,Petrol,DSG,Sedan,1800000,2090000,66000,Auto climate control;LED headlights;Android Auto,D-011
+C-0089,Volkswagen,Virtus,GT,2022,Petrol,DSG,Sedan,1800000,2120000,21000,Alloy wheels;Push-button start;Keyless entry;Apple CarPlay;Touchscreen infotainment,D-010
+C-0090,Volkswagen,Taigun,Comfortline,2022,Petrol,Manual,SUV,1170000,1380000,42000,Hill descent control;Sunroof;Towing package;Roof rails;Alloy wheels,D-001
+C-0091,Volkswagen,Taigun,Topline,2022,Petrol,Automatic,SUV,1700000,1910000,33000,Sunroof;Leather seats;Apple CarPlay;Rear camera,D-009
+C-0092,Volkswagen,Taigun,GT,2022,Petrol,DSG,SUV,1900000,2170000,33000,Hill descent control;All-wheel drive;Apple CarPlay;Rear camera;Ambient lighting,D-006
+C-0093,Volkswagen,Tiguan,Comfortline,2019,Petrol,Automatic,SUV,3300000,3540000,48000,Alloy wheels;Electronic parking brake;Roof rails,D-005
+C-0094,Volkswagen,Tiguan,Comfortline,2020,Petrol,Automatic,SUV,3300000,3850000,38000,Electronic parking brake;Hill descent control;Rear camera,D-001
+C-0095,Volkswagen,Tiguan,Highline,2019,Petrol,Automatic,SUV,3800000,4540000,87000,Apple CarPlay;All-wheel drive;Cruise control;Touchscreen infotainment,D-009
+C-0096,Volkswagen,Tiguan,Highline,2020,Petrol,Automatic,SUV,3800000,4410000,42000,Alloy wheels;Sunroof;Cruise control;Electronic parking brake;Rear camera,D-003
+C-0097,Skoda,Kushaq,Active,2021,Petrol,Manual,SUV,1050000,1260000,46000,Sunroof;Roof rails;Ambient lighting;Hill descent control;Rear camera;Towing package,D-012
+C-0098,Skoda,Kushaq,Style,2021,Petrol,Automatic,SUV,1600000,1720000,30000,Leather seats;Touchscreen infotainment;Cruise control;Hill descent control;Alloy wheels;All-wheel drive,D-007
+C-0099,Skoda,Kushaq,Monte Carlo,2021,Petrol,Automatic,SUV,1750000,1910000,56000,Leather seats;Hill descent control;Alloy wheels;Touchscreen infotainment,D-007
+C-0100,Skoda,Slavia,Active,2023,Petrol,Manual,Sedan,1050000,1140000,29000,Apple CarPlay;Electronic stability control;Alloy wheels,D-009
+C-0101,Skoda,Slavia,Style,2023,Petrol,Automatic,Sedan,1550000,1860000,22000,Push-button start;Cruise control;Apple CarPlay;LED headlights;Leather seats;Alloy wheels,D-011
+C-0102,Skoda,Kodiaq,Style,2020,Petrol,Automatic,SUV,3800000,4350000,65000,Hill descent control;Cruise control;Rear camera;All-wheel drive,D-011
+C-0103,Skoda,Kodiaq,L&K,2020,Petrol,Automatic,SUV,4300000,4570000,74000,Touchscreen infotainment;Electronic parking brake;Alloy wheels,D-001
+C-0104,Kia,Seltos,HTE,2022,Petrol,Manual,SUV,1090000,1160000,36000,Towing package;Leather seats;Touchscreen infotainment,D-008
+C-0105,Kia,Seltos,GTX+,2022,Petrol,Automatic,SUV,1700000,2010000,35000,Rear camera;Roof rails;Android Auto,D-011
+C-0106,Kia,Seltos,X-Line,2022,Diesel,Automatic,SUV,1950000,2220000,21000,Ambient lighting;Apple CarPlay;Leather seats,D-004
+C-0107,Kia,Sonet,HTE,2019,Petrol,Manual,SUV,790000,920000,52000,Alloy wheels;Cruise control;Electronic parking brake;Leather seats;Rear camera,D-007
+C-0108,Kia,Sonet,HTE,2020,Petrol,Manual,SUV,790000,900000,66000,Towing package;Leather seats;Cruise control;Android Auto;Hill descent control,D-011
+C-0109,Kia,Sonet,HTE,2021,Petrol,Manual,SUV,790000,830000,43000,Ambient lighting;Android Auto;Towing package;Hill descent control,D-002
+C-0110,Kia,Sonet,GTX+,2019,Diesel,Automatic,SUV,1400000,1510000,34000,Android Auto;Electronic parking brake;Touchscreen infotainment;Alloy wheels,D-003
+C-0111,Kia,Sonet,GTX+,2020,Diesel,Automatic,SUV,1400000,1620000,34000,Towing package;Alloy wheels;Leather seats,D-007
+C-0112,Kia,Sonet,GTX+,2021,Diesel,Automatic,SUV,1400000,1620000,59000,Alloy wheels;Hill descent control;Sunroof;Touchscreen infotainment;Electronic parking brake;Cruise control,D-014
+C-0113,Kia,Carens,Premium,2021,Petrol,Manual,Minivan,1050000,1150000,42000,Power sliding doors;Cabin air filter;Rear camera,D-001
+C-0114,Kia,Carens,Prestige,2021,Diesel,Automatic,Minivan,1500000,1700000,41000,Multiple USB ports;Rear entertainment;Touchscreen infotainment;Apple CarPlay;Cabin air filter,D-007
+C-0115,Ford,EcoSport,Ambiente,2023,Petrol,Manual,SUV,790000,910000,17000,Rear camera;Towing package;Alloy wheels,D-011
+C-0116,Ford,EcoSport,Titanium,2023,Petrol,Automatic,SUV,1150000,1320000,11000,All-wheel drive;Android Auto;Electronic parking brake;Roof rails;Rear camera,D-006
+C-0117,Ford,Endeavour,Ambient,2020,Diesel,Automatic,SUV,3300000,3820000,46000,All-wheel drive;Alloy wheels;Touchscreen infotainment,D-002
+C-0118,Ford,Endeavour,Titanium,2020,Diesel,Automatic,SUV,3700000,4230000,48000,Ambient lighting;Apple CarPlay;Roof rails;All-wheel drive;Cruise control;Rear camera,D-014
+C-0119,Ford,Endeavour,Sport,2020,Diesel,Automatic,SUV,3900000,4400000,50000,All-wheel drive;Apple CarPlay;Electronic parking brake;Sunroof;Cruise control,D-014
+C-0120,Nissan,Magnite,XE,2022,Petrol,Manual,SUV,600000,720000,19000,Rear camera;Apple CarPlay;Towing package;Cruise control;Ambient lighting,D-008
+C-0121,Nissan,Magnite,XV,2022,Petrol,CVT,SUV,850000,1020000,22000,Cruise control;Towing package;Electronic parking brake;Ambient lighting;Android Auto,D-004
+C-0122,Nissan,Kicks,XV,2019,Petrol,Manual,SUV,950000,1050000,53000,Apple CarPlay;Towing package;Roof rails,D-005
+C-0123,Nissan,Kicks,XV,2020,Petrol,Manual,SUV,950000,1050000,39000,Apple CarPlay;Leather seats;Cruise control;Ambient lighting;Electronic parking brake,D-008
+C-0124,Nissan,Kicks,XV Premium,2019,Petrol,CVT,SUV,1300000,1490000,55000,Sunroof;Leather seats;All-wheel drive,D-009
+C-0125,Nissan,Kicks,XV Premium,2020,Petrol,CVT,SUV,1300000,1390000,29000,Sunroof;Ambient lighting;Alloy wheels,D-004
+C-0126,MG,Hector,Style,2021,Petrol,Manual,SUV,1400000,1540000,24000,Roof rails;Electronic parking brake;Android Auto;Rear camera,D-012
+C-0127,MG,Hector,Smart Pro,2021,Petrol,CVT,SUV,1800000,2070000,40000,Ambient lighting;Electronic parking brake;Android Auto;Cruise control;Leather seats,D-001
+C-0128,MG,Hector,Sharp Pro,2021,Diesel,Automatic,SUV,2100000,2270000,52000,Ambient lighting;Apple CarPlay;Sunroof;Touchscreen infotainment;Electronic parking brake;Hill descent control,D-012
+C-0129,MG,Astor,Style,2023,Petrol,Manual,SUV,1000000,1060000,19000,Apple CarPlay;Rear camera;Ambient lighting;Towing package;Touchscreen infotainment;Hill descent control,D-014
+C-0130,MG,Astor,Sharp,2023,Petrol,CVT,SUV,1500000,1770000,28000,All-wheel drive;Sunroof;Towing package;Ambient lighting,D-014
+C-0131,MG,Gloster,Sharp 2WD,2020,Diesel,Automatic,SUV,3200000,3720000,35000,Android Auto;Electronic parking brake;Leather seats;Hill descent control;Ambient lighting;Towing package,D-014
+C-0132,MG,Gloster,Savvy 4WD,2020,Diesel,Automatic,SUV,3800000,4050000,25000,Roof rails;Rear camera;Touchscreen infotainment,D-004
+C-0133,Tata,Nexon,XE,2022,Petrol,Manual,SUV,810000,900000,20000,Rear camera;Roof rails;Cruise control;Alloy wheels;Apple CarPlay,D-003
+C-0134,Tata,Nexon,XZ+,2022,Petrol,Automatic,SUV,1300000,1380000,40000,Roof rails;Alloy wheels;Android Auto,D-002
+C-0135,Tata,Nexon,XZ+ Diesel,2022,Diesel,Automatic,SUV,1500000,1730000,32000,Rear camera;Sunroof;Cruise control;Roof rails;All-wheel drive,D-010
+C-0136,Tata,Harrier,XE,2019,Diesel,Manual,SUV,1500000,1710000,77000,Touchscreen infotainment;Ambient lighting;Android Auto;Hill descent control,D-012
+C-0137,Tata,Harrier,XE,2020,Diesel,Manual,SUV,1500000,1700000,44000,Hill descent control;Leather seats;Towing package;Alloy wheels;Android Auto;Apple CarPlay,D-006
+C-0138,Tata,Harrier,XZA+,2019,Diesel,Automatic,SUV,2100000,2380000,56000,Android Auto;Sunroof;Alloy wheels;Ambient lighting;Leather seats,D-011
+C-0139,Tata,Harrier,XZA+,2020,Diesel,Automatic,SUV,2100000,2410000,70000,Ambient lighting;Apple CarPlay;Android Auto;Electronic parking brake;Towing package;Cruise control,D-010
+C-0140,Tata,Safari,XE,2021,Diesel,Manual,SUV,1600000,1850000,37000,Ambient lighting;Apple CarPlay;Alloy wheels;Leather seats;Rear camera,D-007
+C-0141,Tata,Safari,XZA+,2021,Diesel,Automatic,SUV,2200000,2370000,55000,Touchscreen infotainment;All-wheel drive;Sunroof,D-006
+C-0142,Tata,Punch,Pure,2023,Petrol,Manual,SUV,610000,720000,29000,Ambient lighting;All-wheel drive;Leather seats;Electronic parking brake,D-008
+C-0143,Tata,Punch,Creative,2023,Petrol,AMT,SUV,850000,960000,15000,Leather seats;Apple CarPlay;Roof rails,D-005
+C-0144,Mahindra,XUV700,MX,2020,Petrol,Manual,SUV,1400000,1540000,56000,Towing package;Ambient lighting;Apple CarPlay;Electronic parking brake,D-012
+C-0145,Mahindra,XUV700,AX7,2020,Petrol,Automatic,SUV,2000000,2260000,38000,Ambient lighting;Towing package;Sunroof;Rear camera;Apple CarPlay,D-001
+C-0146,Mahindra,XUV700,AX7 Diesel,2020,Diesel,Automatic,SUV,2200000,2630000,73000,Rear camera;Ambient lighting;Towing package;Touchscreen infotainment;Alloy wheels,D-006
+C-0147,Mahindra,Thar,AX,2022,Petrol,Manual,SUV,1100000,1290000,38000,Sunroof;Rear camera;Apple CarPlay;Alloy wheels,D-008
+C-0148,Mahindra,Thar,AX,2024,Petrol,Manual,SUV,1100000,1290000,13000,Leather seats;Ambient lighting;Rear camera;Roof rails;Cruise control,D-012
+C-0149,Mahindra,Thar,LX,2022,Diesel,Automatic,SUV,1800000,2080000,35000,Rear camera;Leather seats;Touchscreen infotainment;Android Auto;All-wheel drive;Sunroof,D-003
+C-0150,Mahindra,Thar,LX,2024,Diesel,Automatic,SUV,1800000,1990000,5000,Touchscreen infotainment;Rear camera;Apple CarPlay,D-010
+C-0151,Mahindra,Scorpio-N,Z2,2019,Diesel,Manual,SUV,1200000,1330000,52000,Cruise control;Sunroof;Apple CarPlay;Rear camera,D-008
+C-0152,Mahindra,Scorpio-N,Z2,2020,Diesel,Manual,SUV,1200000,1400000,34000,Roof rails;All-wheel drive;Cruise control,D-005
+C-0153,Mahindra,Scorpio-N,Z8,2019,Diesel,Automatic,SUV,2000000,2350000,85000,Ambient lighting;Touchscreen infotainment;Apple CarPlay;Cruise control;Rear camera,D-014
+C-0154,Mahindra,Scorpio-N,Z8,2020,Diesel,Automatic,SUV,2000000,2300000,55000,Electronic parking brake;Hill descent control;Cruise control;Apple CarPlay;All-wheel drive,D-005
+C-9002,Nissan,Kicks,,2023,Petrol,CVT,SUV,10_00_000,11_50_000,18000,Rear camera;Touchscreen infotainment;Alloy wheels,D-010
+C-9004,Tata,Punch,Creative S,2024,Petrol,AMT,SUV,9_50_000,10_50_000,500,Rear camera;Touchscreen infotainment;Alloy wheels;Keyless entry,D-999

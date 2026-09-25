@@ -1,0 +1,15 @@
+dealer_id,dealer_name,city,state,address,phone,email,rating
+D-001,AutoNation Motors,Mumbai,Maharashtra,12 Marine Drive,+91-22-2204-1001,sales@autonation.example,4.5
+D-002,DriveZone Auto,Delhi,Delhi,45 Connaught Place,+91-11-2301-1002,info@drivezone.example,4.2
+D-003,Prestige Cars,Bangalore,Karnataka,78 MG Road,+91-80-2552-1003,sales@prestigecars.example,4.7
+D-004,Highway Auto Hub,Chennai,Tamil Nadu,23 Anna Salai,+91-44-2431-1004,contact@highwayauto.example,3.9
+D-005,GreenWheel Motors,Hyderabad,Telangana,9 Banjara Hills,+91-40-2345-1005,hello@greenwheel.example,4.4
+D-006,Royal Drive,Pune,Maharashtra,56 FC Road,+91-20-2567-1006,sales@royaldrive.example,4.1
+D-007,CityWheels,Kolkata,West Bengal,32 Park Street,+91-33-2486-1007,enquiry@citywheels.example,3.8
+D-008,Star Auto Group,Ahmedabad,Gujarat,14 Ashram Road,+91-79-2656-1008,info@starautogroup.example,4.3
+D-009,Trident Motors,Jaipur,Rajasthan,67 Tonk Road,+91-141-2701-1009,sales@tridentmotors.example,4.0
+D-010,MileStar Auto,Chandigarh,Chandigarh,10 Sector 17,+91-172-2701-1010,contact@milestar.example,4.6
+D-011,Summit Motors,Lucknow,Uttar Pradesh,8 Hazratganj,+91-522-2301-1011,sales@summitmotors.example,3.7
+D-012,Apex AutoCare,Indore,Madhya Pradesh,19 MG Road,+91-731-2551-1012,,4.1
+D-013,OpenRoad Auto,Nagpur,Maharashtra,31 Dharampeth,+91-712-2541-1013,sales@openroad.example,4.8
+D-014,Zenith CarPoint,Surat,Gujarat,5 Athwa Lines,+91-261-2411-1014,info@zenithcarpoint.example,3.6
