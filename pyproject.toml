@@ -1,0 +1,111 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "wn-cardealer-chatbot"
+version = "0.1.0"
+description = "Car dealer chatbot: identify a car, retrieve the matching dealer, then show dealer details or schedule a call."
+readme = "README.md"
+license = { file = "LICENSE" }
+# Floor is 3.12; the scaffold .venv is 3.13.9.
+requires-python = ">=3.12"
+# authors = [{ name = "..." }]  <- fill in before submission
+
+dependencies = [
+    # web layer
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.32",
+    # UI layer
+    "streamlit>=1.40",
+    # contracts + config (.env loading for config/settings.py)
+    "pydantic>=2.9",
+    "pydantic-settings>=2.6",
+    # LLM adapter: speaks the OpenAI wire protocol, which is exactly what
+    # OpenAICompatibleClient needs to reach every /v1-compatible endpoint.
+    "openai>=1.54",
+    # persistence (SQLite default so the assignment runs with no external service)
+    "sqlalchemy>=2.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.3",
+    "pytest-cov>=6.0",
+    "ruff>=0.7",
+    "mypy>=1.13",
+]
+
+# src layout: the wheel ships the packages at top level, so imports read
+# `DTO.inputs.chat`, `application.chat.service`, `infrastructure.llm.factory`
+# and never as a bare top-level module.
+[tool.hatch.build.targets.wheel]
+packages = [
+    "src/DTO",
+    "src/application",
+    "src/config",
+    "src/domain",
+    "src/infrastructure",
+    "src/models",
+    "src/ports",
+    "src/presentation",
+]
+
+# `scripts` is a plain script directory and is deliberately NOT shipped.
+[tool.hatch.build.targets.sdist]
+include = ["src", "tests", "data", "scripts", "pyproject.toml", ".env.example"]
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+testpaths = ["tests"]
+# lets tests import `src/` without requiring an editable install first
+pythonpath = ["src"]
+addopts = "-q --strict-markers --strict-config"
+markers = [
+    "unit: fast isolated tests, no external dependencies",
+    "integration: tests that touch the database or the HTTP layer",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["src", "tests", "scripts"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "TID", "UP", "B", "SIM"]
+ignore = [
+    "E501",    # line length is enforced by the formatter, not the linter
+    "B008",    # FastAPI Depends() in defaults is the documented idiom
+]
+
+[tool.ruff.lint.per-file-ignores]
+# package markers may re-export names for convenience
+"**/__init__.py" = ["F401"]
+# the DTO package name is uppercase by design; the naming lint must not fight it
+"src/DTO/**/*.py" = ["N999"]
+
+[tool.ruff.lint.isort]
+known-first-party = [
+    "DTO",
+    "application",
+    "config",
+    "domain",
+    "infrastructure",
+    "models",
+    "ports",
+    "presentation",
+]
+
+[tool.ruff.lint.flake8-tidy-imports]
+ban-relative-imports = "parents"
+
+[tool.mypy]
+python_version = "3.12"
+files = ["src"]
+strict = true
+warn_unreachable = true
+show_error_codes = true
+# third-party stubs are not shipped for the LLM SDK
+[[tool.mypy.overrides]]
+module = ["openai.*", "streamlit.*"]
+ignore_missing_imports = true

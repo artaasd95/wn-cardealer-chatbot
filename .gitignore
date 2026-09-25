@@ -45,7 +45,6 @@ profile_default/
 ipython_config.py
 
 # Environments
-.env
 .venv
 env/
 venv/
@@ -62,6 +61,7 @@ dmypy.json
 .ruff_cache/
 
 # Environments and secrets
+# .env holds the real LLM_API_KEY and is never committed; .env.example is.
 .env
 .env.*
 !.env.example
@@ -87,12 +87,14 @@ pip-log.txt
 pip-delete-this-directory.txt
 
 # Databases and local data
+# NOTE: do NOT ignore data/ wholesale. It holds the committed CSV fixtures
+# (cars.csv, dealers.csv) that the repositories and tests are seeded from.
+# Ignoring the directory would hide those fixtures from git entirely, and no
+# `!data/...` exception can rescue them: git cannot re-include a file whose
+# parent directory is excluded. Scope the rule to the file types instead.
 *.db
 *.sqlite3
 *.sqlite
-data/
-!data/*.json
-!data/**/*.json
 chroma_db/
 vectorstore/
 *.pkl
