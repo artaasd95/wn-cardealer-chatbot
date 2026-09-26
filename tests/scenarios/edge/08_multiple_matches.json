@@ -1,0 +1,55 @@
+{
+  "id": "edge_08_multiple_matches",
+  "title": "Multiple cars match",
+  "suite": "edge",
+  "description": "A make/model shared by many rows returns up to five disambiguation candidates instead of a random pick.",
+  "plan_refs": [
+    "plan.md §3 Item lookup: Multiple cars match"
+  ],
+  "tags": [
+    "item_lookup",
+    "disambiguation"
+  ],
+  "steps": [
+    {
+      "name": "search for the whole 3 Series family",
+      "llm": {
+        "intent": "ITEM_LOOKUP",
+        "car": {
+          "make": "BMW",
+          "model": "3 Series"
+        }
+      },
+      "request": {
+        "session_id": null,
+        "message": "show me your BMW 3 Series cars",
+        "user_id": "scenario-user"
+      },
+      "expect": {
+        "status": 200,
+        "body": {
+          "workflow_state": {
+            "equals": "AWAITING_CAR"
+          },
+          "reply": {
+            "all_of": [
+              {
+                "regex": "(?i)i found several matches"
+              },
+              {
+                "regex": "(?i)which of these did you mean"
+              }
+            ]
+          },
+          "suggested_actions": {
+            "min_items": 2,
+            "max_items": 5,
+            "contains_all": [
+              "(?i)3 series"
+            ]
+          }
+        }
+      }
+    }
+  ]
+}

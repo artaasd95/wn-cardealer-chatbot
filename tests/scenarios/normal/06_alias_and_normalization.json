@@ -1,0 +1,37 @@
+{
+  "id": "normal_06_alias_and_normalization",
+  "title": "Abbreviations and aliases resolve to the catalog",
+  "suite": "normal",
+  "description": "The user types 'B.M.W.' and 'Merc C Class'; the alias table maps them to canonical makes/models before the SQL search runs.",
+  "plan_refs": ["plan.md Phase 1 aliases", "plan.md §3 Item lookup: Alternative names/abbreviations"],
+  "tags": ["item_lookup", "normalization", "happy_path"],
+  "steps": [
+    {
+      "name": "ask for a B.M.W. 3 Series 320i 2021",
+      "llm": {
+        "intent": "ITEM_LOOKUP",
+        "car": {"make": "B.M.W.", "model": "3 Series", "variant": "320i", "year_from": 2021, "year_to": 2021}
+      },
+      "request": {"session_id": null, "message": "show me a B.M.W. 3 Series 320i 2021", "user_id": "scenario-user"},
+      "expect": {
+        "status": 200,
+        "body": {
+          "workflow_state": {"equals": "AWAITING_ACTION"},
+          "reply": {"regex": "(?i)^Found .*3 Series 320i \\(2021\\)"}
+        }
+      }
+    },
+    {
+      "name": "ask for a Merc C Class (alias: Mercedes-Benz C-Class)",
+      "llm": {"intent": "ITEM_LOOKUP", "car": {"make": "Merc", "model": "C Class"}},
+      "request": {"session_id": null, "message": "what Merc C Class cars do you have?"},
+      "expect": {
+        "status": 200,
+        "body": {
+          "workflow_state": {"equals": "AWAITING_CAR"},
+          "reply": {"all_of": [{"regex": "several matches"}, {"regex": "C-Class"}]}
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,123 @@
+{
+  "id": "edge_05_ambiguous_reference",
+  "title": "'Yes' without a referent and 'that car' when several match",
+  "suite": "edge",
+  "description": "Affirmations and vague references are never mapped to a random car: the bot either re-asks or re-lists the candidates.",
+  "plan_refs": [
+    "plan.md §3 Session: User says \"yes\" without clear referent",
+    "plan.md §3 Session: User refers to \"that car\" when multiple cars exist"
+  ],
+  "tags": [
+    "session",
+    "item_lookup"
+  ],
+  "steps": [
+    {
+      "name": "say 'yes' right at the start",
+      "llm": {
+        "intent": "UNKNOWN"
+      },
+      "request": {
+        "session_id": null,
+        "message": "yes",
+        "user_id": "scenario-user"
+      },
+      "expect": {
+        "status": 200,
+        "body": {
+          "reply": {
+            "any_of": [
+              {
+                "regex": "didn't understand"
+              },
+              {
+                "regex": "not sure"
+              },
+              {
+                "regex": "couldn't find"
+              },
+              {
+                "regex": "Pick one"
+              },
+              {
+                "regex": "Which of these"
+              },
+              {
+                "regex": "No (car|dealer) selected"
+              }
+            ]
+          },
+          "workflow_state": {
+            "in": [
+              "START",
+              "AWAITING_CAR",
+              "CAR_SELECTED",
+              "CAR_NOT_FOUND",
+              "AWAITING_ACTION",
+              "DEALER_DETAILS_SHOWN",
+              "AWAITING_DATETIME",
+              "SCHEDULE_CONFIRMED"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "search for a model with several matches",
+      "llm": {
+        "intent": "ITEM_LOOKUP",
+        "car": {
+          "make": "BMW",
+          "model": "3 Series"
+        }
+      },
+      "request": {
+        "session_id": "$session",
+        "message": "I want a BMW 3 Series"
+      },
+      "expect": {
+        "status": 200,
+        "body": {
+          "workflow_state": {
+            "equals": "AWAITING_CAR"
+          }
+        }
+      }
+    },
+    {
+      "name": "point vaguely at 'that car'",
+      "llm": {
+        "intent": "ITEM_LOOKUP",
+        "car": {
+          "make": "BMW",
+          "model": "3 Series"
+        }
+      },
+      "request": {
+        "session_id": "$session",
+        "message": "that car looks nice, go with that one"
+      },
+      "expect": {
+        "status": 200,
+        "body": {
+          "reply": {
+            "any_of": [
+              {
+                "regex": "several matches"
+              },
+              {
+                "regex": "Which of these"
+              },
+              {
+                "regex": "Pick one"
+              }
+            ]
+          },
+          "workflow_state": {
+            "equals": "AWAITING_CAR"
+          }
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,36 @@
+{
+  "id": "normal_01_item_lookup_single_match",
+  "title": "Item lookup finds exactly one car",
+  "suite": "normal",
+  "description": "The user names a make, model, variant and year that match one row; the bot presents the car with its price band and the dealer that sells it.",
+  "plan_refs": ["plan.md §2 Item lookup flow", "plan.md §3 Item lookup (happy path)"],
+  "tags": ["item_lookup", "happy_path"],
+  "steps": [
+    {
+      "name": "ask for a BMW 3 Series 320i of 2021",
+      "llm": {
+        "intent": "ITEM_LOOKUP",
+        "car": {"make": "BMW", "model": "3 Series", "variant": "320i", "year_from": 2021, "year_to": 2021}
+      },
+      "request": {"session_id": null, "message": "I'm looking for a BMW 3 Series 320i 2021", "user_id": "scenario-user"},
+      "expect": {
+        "status": 200,
+        "body": {
+          "session_id": {"regex": "^[0-9a-fA-F-]{36}$"},
+          "workflow_state": {"equals": "AWAITING_ACTION"},
+          "reply": {
+            "all_of": [
+              {"regex": "^Found BMW 3 Series 320i \\(2021\\)"},
+              {"regex": "\\$3,500,000 - \\$4,100,000"},
+              {"regex": "Prestige Cars in Bangalore can help you with it"},
+              {"regex": "Would you like dealer details or to schedule a call\\?"}
+            ],
+            "max_length": 2000
+          },
+          "suggested_actions": {"equals": ["Get dealer details", "Schedule a call", "Find another car"]},
+          "requires_input": {"equals": true}
+        }
+      }
+    }
+  ]
+}

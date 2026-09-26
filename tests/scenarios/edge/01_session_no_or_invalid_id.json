@@ -1,0 +1,35 @@
+{
+  "id": "edge_01_session_no_or_invalid_id",
+  "title": "No session id / invalid session id",
+  "suite": "edge",
+  "description": "A first turn without any session id, and a turn carrying an id the store has never seen. Both must answer normally and hand back a live session id — an unknown id is never an error (a truly expired session behaves the same way and is covered by tests/unit/use_cases/test_load_session_use_case.py).",
+  "plan_refs": ["plan.md §3 Session: No session ID", "plan.md §3 Session: Invalid session ID", "plan.md §3 Session: Expired/missing in-memory session"],
+  "tags": ["session"],
+  "steps": [
+    {
+      "name": "first turn with no session id at all",
+      "llm": {"intent": "UNKNOWN"},
+      "request": {"message": "hello"},
+      "expect": {
+        "status": 200,
+        "body": {
+          "session_id": {"regex": "^[0-9a-fA-F-]{36}$"},
+          "workflow_state": {"in": ["START", "AWAITING_CAR"]},
+          "reply": {"min_length": 1, "max_length": 2000}
+        }
+      }
+    },
+    {
+      "name": "turn with an unknown session id",
+      "llm": {"intent": "UNKNOWN"},
+      "request": {"session_id": "ghost-session-000", "message": "hello again"},
+      "expect": {
+        "status": 200,
+        "body": {
+          "session_id": {"regex": "^[0-9a-fA-F-]{36}$", "must_not": [{"equals": "ghost-session-000"}]},
+          "workflow_state": {"in": ["START", "AWAITING_CAR"]}
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,59 @@
+{
+  "id": "edge_24_llm_degraded_contract",
+  "title": "LLM outage contract (run against healthy AND dead provider)",
+  "suite": "edge",
+  "description": "The single contract shared by LLM timeout, API failure, rate limiting, retry-budget exhaustion, empty completions and truncated output: HTTP 200 with a graceful reply — never a 500 and never an invented answer. Run the whole suite twice: once with a working LLM_BASE_URL, once with LLM_BASE_URL pointing at an unreachable endpoint. This step must pass both times. The provider-level breakdowns themselves are unit-tested in tests/unit/llm_factory/test_openai_compatible_fallbacks.py.",
+  "plan_refs": [
+    "plan.md §3 LLM: LLM timeout",
+    "plan.md §3 LLM: LLM API failure",
+    "plan.md §3 LLM: Rate limit",
+    "plan.md §3 LLM: Invalid structured output",
+    "plan.md §3 LLM provider: Empty completion",
+    "plan.md §3 LLM provider: Truncated / non-JSON output",
+    "plan.md §3 LLM provider: Retry budget exhausted",
+    "plan.md §3 LLM provider: Unreachable or self-hosted endpoint down"
+  ],
+  "tags": ["llm", "degraded_mode"],
+  "notes": "Acceptance is intentionally wide: both the healthy-provider replies and the deterministic fallbacks must satisfy it.",
+  "steps": [
+    {
+      "name": "a normal request during a possible outage",
+      "llm": {"intent": "ITEM_LOOKUP", "car": {"make": "BMW", "model": "3 Series", "variant": "320i", "year_from": 2021, "year_to": 2021}},
+      "request": {"session_id": null, "message": "I'm looking for a BMW 3 Series 320i 2021", "user_id": "scenario-user"},
+      "expect": {
+        "status": 200,
+        "body": {
+          "session_id": {"regex": "^[0-9a-fA-F-]{36}$|unknown"},
+          "reply": {"any_of": [
+            {"regex": "(?i)^Found"},
+            {"regex": "(?i)couldn't find"},
+            {"regex": "(?i)several matches"},
+            {"regex": "(?i)didn't understand"},
+            {"regex": "(?i)not sure"},
+            {"regex": "(?i)An unexpected error occurred"},
+            {"regex": "(?i)I encountered an issue"}
+          ], "must_not": [{"regex": "(?i)traceback|<html|stack overflow"}]},
+          "workflow_state": {"in": ["AWAITING_ACTION", "CAR_SELECTED", "AWAITING_CAR", "CAR_NOT_FOUND", "START", "ERROR"]}
+        }
+      }
+    },
+    {
+      "name": "a second turn on the same degraded session",
+      "llm": {"intent": "DEALER_DETAILS", "reply": ""},
+      "request": {"session_id": "$session", "message": "and now the dealer details"},
+      "expect": {
+        "status": 200,
+        "body": {
+          "reply": {"any_of": [
+            {"regex": "(?i)prestige cars"},
+            {"regex": "(?i)no dealer selected"},
+            {"regex": "(?i)didn't understand"},
+            {"regex": "(?i)An unexpected error occurred"},
+            {"regex": "(?i)I encountered an issue"}
+          ], "must_not": [{"regex": "(?i)traceback|<html"}]},
+          "workflow_state": {"in": ["DEALER_DETAILS_SHOWN", "AWAITING_ACTION", "CAR_SELECTED", "AWAITING_CAR", "START", "ERROR"]}
+        }
+      }
+    }
+  ]
+}

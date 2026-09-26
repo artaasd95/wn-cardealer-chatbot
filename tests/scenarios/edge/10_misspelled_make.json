@@ -1,0 +1,117 @@
+{
+  "id": "edge_10_misspelled_make",
+  "title": "Misspelled make/model",
+  "suite": "edge",
+  "description": "A misspelling is either corrected by extraction or answered with the not-found clarification — never with an invented car and never with a 500.",
+  "plan_refs": [
+    "plan.md §3 Item lookup: Misspelled make/model"
+  ],
+  "tags": [
+    "item_lookup"
+  ],
+  "steps": [
+    {
+      "name": "ask for a 'BMV' 3 Series",
+      "llm": {
+        "intent": "ITEM_LOOKUP",
+        "car": {
+          "make": "BMV",
+          "model": "3 Series",
+          "variant": "320i",
+          "year_from": 2021,
+          "year_to": 2021
+        }
+      },
+      "request": {
+        "session_id": null,
+        "message": "BMV 3 Series 320i 2021 please",
+        "user_id": "scenario-user"
+      },
+      "expect": {
+        "status": 200,
+        "body": {
+          "reply": {
+            "any_of": [
+              {
+                "regex": "(?i)couldn't find"
+              },
+              {
+                "regex": "(?i)^Found"
+              },
+              {
+                "regex": "(?i)several matches"
+              },
+              {
+                "regex": "(?i)didn't understand"
+              }
+            ],
+            "must_not": [
+              {
+                "regex": "(?i)traceback|exception|<html"
+              }
+            ]
+          },
+          "workflow_state": {
+            "in": [
+              "START",
+              "AWAITING_CAR",
+              "CAR_SELECTED",
+              "CAR_NOT_FOUND",
+              "AWAITING_ACTION",
+              "DEALER_DETAILS_SHOWN",
+              "AWAITING_DATETIME",
+              "SCHEDULE_CONFIRMED"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "ask with a garbled model name",
+      "llm": {
+        "intent": "ITEM_LOOKUP",
+        "car": {
+          "make": "BMW",
+          "model": "3 Seriez"
+        }
+      },
+      "request": {
+        "session_id": null,
+        "message": "BMW 3 Seriez"
+      },
+      "expect": {
+        "status": 200,
+        "body": {
+          "reply": {
+            "any_of": [
+              {
+                "regex": "(?i)couldn't find"
+              },
+              {
+                "regex": "(?i)several matches"
+              },
+              {
+                "regex": "(?i)^Found"
+              },
+              {
+                "regex": "(?i)which of these"
+              }
+            ]
+          },
+          "workflow_state": {
+            "in": [
+              "START",
+              "AWAITING_CAR",
+              "CAR_SELECTED",
+              "CAR_NOT_FOUND",
+              "AWAITING_ACTION",
+              "DEALER_DETAILS_SHOWN",
+              "AWAITING_DATETIME",
+              "SCHEDULE_CONFIRMED"
+            ]
+          }
+        }
+      }
+    }
+  ]
+}

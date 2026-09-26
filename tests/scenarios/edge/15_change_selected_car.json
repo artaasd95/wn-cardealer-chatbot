@@ -1,0 +1,94 @@
+{
+  "id": "edge_15_change_selected_car",
+  "title": "User changes the selected car mid-scheduling",
+  "suite": "edge",
+  "description": "While the bot is collecting a date, a new lookup replaces the stored selection and returns the session to a legal action state.",
+  "plan_refs": [
+    "plan.md §3 Item lookup: User changes selected car"
+  ],
+  "tags": [
+    "item_lookup",
+    "session",
+    "schedule_call"
+  ],
+  "steps": [
+    {
+      "name": "select the BMW 3 Series 320i 2021",
+      "llm": {
+        "intent": "ITEM_LOOKUP",
+        "car": {
+          "make": "BMW",
+          "model": "3 Series",
+          "variant": "320i",
+          "year_from": 2021,
+          "year_to": 2021
+        }
+      },
+      "request": {
+        "session_id": null,
+        "message": "BMW 3 Series 320i 2021",
+        "user_id": "scenario-user"
+      },
+      "expect": {
+        "status": 200,
+        "body": {
+          "workflow_state": {
+            "equals": "AWAITING_ACTION"
+          }
+        }
+      }
+    },
+    {
+      "name": "start scheduling without a time",
+      "llm": {
+        "intent": "SCHEDULE_CALL",
+        "schedule": {
+          "date_raw": "2030-05-15"
+        }
+      },
+      "request": {
+        "session_id": "$session",
+        "message": "schedule a call on 2030-05-15"
+      },
+      "expect": {
+        "status": 200,
+        "body": {
+          "workflow_state": {
+            "equals": "AWAITING_DATETIME"
+          }
+        }
+      }
+    },
+    {
+      "name": "change your mind about the car",
+      "llm": {
+        "intent": "ITEM_LOOKUP",
+        "car": {
+          "make": "BMW",
+          "model": "3 Series",
+          "variant": "330i",
+          "year_from": 2021,
+          "year_to": 2021
+        }
+      },
+      "request": {
+        "session_id": "$session",
+        "message": "actually make it the 330i of 2021 instead"
+      },
+      "expect": {
+        "status": 200,
+        "body": {
+          "session_id": {
+            "equals": "$session"
+          },
+          "workflow_state": {
+            "equals": "AWAITING_ACTION"
+          },
+          "reply": {
+            "regex": "(?i)^Found BMW 3 Series 330i \\(2021\\)"
+          }
+        }
+      }
+    }
+  ]
+}

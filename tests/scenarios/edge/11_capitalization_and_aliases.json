@@ -1,0 +1,114 @@
+{
+  "id": "edge_11_capitalization_and_aliases",
+  "title": "Different capitalization and alternative names",
+  "suite": "edge",
+  "description": "bmw/BMW/b.m.w. and C Class/C-Class all resolve to the same catalog rows; abbreviations go through the alias table.",
+  "plan_refs": [
+    "plan.md §3 Item lookup: Different capitalization",
+    "plan.md §3 Item lookup: Alternative names/abbreviations"
+  ],
+  "tags": [
+    "item_lookup",
+    "normalization"
+  ],
+  "steps": [
+    {
+      "name": "mixed capitalization",
+      "llm": {
+        "intent": "ITEM_LOOKUP",
+        "car": {
+          "make": "bMw",
+          "model": "3 SeRiEs",
+          "variant": "320I",
+          "year_from": 2021,
+          "year_to": 2021
+        }
+      },
+      "request": {
+        "session_id": null,
+        "message": "bMw 3 SeRiEs 320I 2021",
+        "user_id": "scenario-user"
+      },
+      "expect": {
+        "status": 200,
+        "body": {
+          "reply": {
+            "regex": "(?i)^Found .*3 Series 320i \\(2021\\)"
+          },
+          "workflow_state": {
+            "equals": "AWAITING_ACTION"
+          }
+        }
+      }
+    },
+    {
+      "name": "abbreviation B.M.W.",
+      "llm": {
+        "intent": "ITEM_LOOKUP",
+        "car": {
+          "make": "B.M.W.",
+          "model": "3 Series",
+          "variant": "320i",
+          "year_from": 2021,
+          "year_to": 2021
+        }
+      },
+      "request": {
+        "session_id": null,
+        "message": "anything in B.M.W. 3 Series 320i 2021?"
+      },
+      "expect": {
+        "status": 200,
+        "body": {
+          "reply": {
+            "regex": "(?i)^Found .*3 Series 320i \\(2021\\)"
+          }
+        }
+      }
+    },
+    {
+      "name": "alias Merc C Class",
+      "llm": {
+        "intent": "ITEM_LOOKUP",
+        "car": {
+          "make": "Merc",
+          "model": "C Class"
+        }
+      },
+      "request": {
+        "session_id": null,
+        "message": "what Merc C Class cars do you have?"
+      },
+      "expect": {
+        "status": 200,
+        "body": {
+          "reply": {
+            "any_of": [
+              {
+                "regex": "(?i)several matches"
+              },
+              {
+                "regex": "(?i)which of these"
+              },
+              {
+                "regex": "(?i)^Found"
+              }
+            ]
+          },
+          "workflow_state": {
+            "in": [
+              "START",
+              "AWAITING_CAR",
+              "CAR_SELECTED",
+              "CAR_NOT_FOUND",
+              "AWAITING_ACTION",
+              "DEALER_DETAILS_SHOWN",
+              "AWAITING_DATETIME",
+              "SCHEDULE_CONFIRMED"
+            ]
+          }
+        }
+      }
+    }
+  ]
+}

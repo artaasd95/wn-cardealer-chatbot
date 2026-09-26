@@ -1,0 +1,44 @@
+{
+  "id": "normal_03_schedule_call",
+  "title": "Schedule a call with the dealer",
+  "suite": "normal",
+  "description": "With a car and dealer selected, the user books a call with a complete date, time and timezone; the bot confirms and stores the appointment locally.",
+  "plan_refs": ["plan.md §2 Schedule-call flow", "plan.md §3 Schedule (happy path)"],
+  "tags": ["schedule_call", "happy_path"],
+  "steps": [
+    {
+      "name": "select the BMW 3 Series 320i 2021",
+      "llm": {
+        "intent": "ITEM_LOOKUP",
+        "car": {"make": "BMW", "model": "3 Series", "variant": "320i", "year_from": 2021, "year_to": 2021}
+      },
+      "request": {"session_id": null, "message": "BMW 3 Series 320i 2021", "user_id": "scenario-user"},
+      "expect": {"status": 200, "body": {"workflow_state": {"equals": "AWAITING_ACTION"}}}
+    },
+    {
+      "name": "book a call for 2030-05-15 at 3pm UTC",
+      "llm": {
+        "intent": "SCHEDULE_CALL",
+        "schedule": {"date_raw": "2030-05-15", "time_raw": "3pm", "timezone": "UTC"},
+        "reply": ""
+      },
+      "request": {"session_id": "$session", "message": "I'd like to schedule a call for 2030-05-15 at 3pm UTC"},
+      "expect": {
+        "status": 200,
+        "body": {
+          "session_id": {"equals": "$session"},
+          "workflow_state": {"equals": "SCHEDULE_CONFIRMED"},
+          "reply": {
+            "all_of": [
+              {"regex": "(book|schedul|confirm|appointment)"},
+              {"regex": "(2030|May 15|15:00|3:00)"}
+            ],
+            "must_not": [{"regex": "(could not|error|failed)"}]
+          },
+          "suggested_actions": {"equals": ["Find another car", "Get dealer details"]},
+          "requires_input": {"equals": true}
+        }
+      }
+    }
+  ]
+}

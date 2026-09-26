@@ -1,0 +1,74 @@
+{
+  "id": "edge_22_schedule_changes_cancel",
+  "title": "User changes the time, cancels, or asks for another dealer",
+  "suite": "edge",
+  "description": "Changing the time after a booking needs a fresh date instead of silently reusing stale context; a cancellation books nothing; an 'another dealer' request is answered without inventing one.",
+  "plan_refs": [
+    "plan.md §3 Schedule: User changes requested time",
+    "plan.md §3 Schedule: User cancels scheduling",
+    "plan.md §3 Schedule: User asks to schedule another dealer"
+  ],
+  "tags": ["schedule_call", "session"],
+  "steps": [
+    {
+      "name": "select the BMW 3 Series 320i 2021 first",
+      "llm": {"intent": "ITEM_LOOKUP", "car": {"make": "BMW", "model": "3 Series", "variant": "320i", "year_from": 2021, "year_to": 2021}},
+      "request": {"session_id": null, "message": "BMW 3 Series 320i 2021", "user_id": "scenario-user"},
+      "expect": {"status": 200, "body": {"workflow_state": {"equals": "AWAITING_ACTION"}}}
+    },
+    {
+      "name": "give only a time (collecting)",
+      "llm": {"intent": "SCHEDULE_CALL", "schedule": {"time_raw": "3pm"}},
+      "request": {"session_id": "$session", "message": "schedule a call at 3pm"},
+      "expect": {"status": 200, "body": {"workflow_state": {"equals": "AWAITING_DATETIME"}}}
+    },
+    {
+      "name": "complete with the date (context carry-over)",
+      "llm": {"intent": "SCHEDULE_CALL", "schedule": {"date_raw": "tomorrow"}, "reply": ""},
+      "request": {"session_id": "$session", "message": "tomorrow works"},
+      "expect": {
+        "status": 200,
+        "body": {
+          "reply": {"regex": "(?i)(book|schedul|confirm)"},
+          "workflow_state": {"equals": "SCHEDULE_CONFIRMED"}
+        }
+      }
+    },
+    {
+      "name": "change the requested time afterwards",
+      "llm": {"intent": "SCHEDULE_CALL", "schedule": {"time_raw": "5pm"}},
+      "request": {"session_id": "$session", "message": "actually make it 5pm"},
+      "expect": {
+        "status": 200,
+        "body": {
+          "reply": {"all_of": [{"regex": "(?i)What date"}], "must_not": [{"regex": "(?i)booked for"}]},
+          "workflow_state": {"equals": "AWAITING_DATETIME"}
+        }
+      }
+    },
+    {
+      "name": "cancel the whole thing",
+      "llm": {"intent": "UNKNOWN"},
+      "request": {"session_id": "$session", "message": "never mind, cancel that please"},
+      "expect": {
+        "status": 200,
+        "body": {
+          "reply": {"must_not": [{"regex": "(?i)booked for"}, {"regex": "(?i)is scheduled"}]},
+          "workflow_state": {"in": ["AWAITING_DATETIME", "AWAITING_ACTION", "CAR_SELECTED", "SCHEDULE_CONFIRMED"]}
+        }
+      }
+    },
+    {
+      "name": "ask to schedule with another dealer",
+      "llm": {"intent": "SCHEDULE_CALL", "schedule": {"date_raw": "2030-05-15", "time_raw": "15:00"}, "reply": ""},
+      "request": {"session_id": "$session", "message": "schedule a call with another dealer for 2030-05-15 at 15:00"},
+      "expect": {
+        "status": 200,
+        "body": {
+          "reply": {"any_of": [{"regex": "(?i)(book|schedul|confirm)"}, {"regex": "(?i)What date"}, {"regex": "(?i)didn't understand"}]},
+          "workflow_state": {"in": ["SCHEDULE_CONFIRMED", "AWAITING_DATETIME", "AWAITING_ACTION"]}
+        }
+      }
+    }
+  ]
+}

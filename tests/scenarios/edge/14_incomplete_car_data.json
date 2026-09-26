@@ -1,0 +1,64 @@
+{
+  "id": "edge_14_incomplete_car_data",
+  "title": "Vague request with nothing extractable",
+  "suite": "edge",
+  "description": "When extraction finds no make, model or variant at all, the search degrades to a disambiguation over the catalog — a usable answer, never a crash and never a random pick.",
+  "plan_refs": [
+    "plan.md §3 Item lookup: Invalid/incomplete car data"
+  ],
+  "tags": [
+    "item_lookup"
+  ],
+  "steps": [
+    {
+      "name": "ask for just 'a car'",
+      "llm": {
+        "intent": "ITEM_LOOKUP",
+        "car": {}
+      },
+      "request": {
+        "session_id": null,
+        "message": "car",
+        "user_id": "scenario-user"
+      },
+      "expect": {
+        "status": 200,
+        "body": {
+          "reply": {
+            "any_of": [
+              {
+                "regex": "(?i)several matches"
+              },
+              {
+                "regex": "(?i)which of these"
+              },
+              {
+                "regex": "(?i)couldn't find"
+              },
+              {
+                "regex": "(?i)didn't understand"
+              }
+            ],
+            "must_not": [
+              {
+                "regex": "(?i)traceback|exception|<html"
+              }
+            ]
+          },
+          "workflow_state": {
+            "in": [
+              "START",
+              "AWAITING_CAR",
+              "CAR_SELECTED",
+              "CAR_NOT_FOUND",
+              "AWAITING_ACTION",
+              "DEALER_DETAILS_SHOWN",
+              "AWAITING_DATETIME",
+              "SCHEDULE_CONFIRMED"
+            ]
+          }
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,39 @@
+{
+  "id": "normal_10_find_another_car",
+  "title": "Changing to another car replaces the selection",
+  "suite": "normal",
+  "description": "After selecting one car the user changes their mind; the new lookup replaces the stored selection and the session stays on a legal state.",
+  "plan_refs": ["plan.md §3 Item lookup: User changes selected car"],
+  "tags": ["item_lookup", "happy_path", "session"],
+  "steps": [
+    {
+      "name": "select the BMW 3 Series 320i 2021",
+      "llm": {
+        "intent": "ITEM_LOOKUP",
+        "car": {"make": "BMW", "model": "3 Series", "variant": "320i", "year_from": 2021, "year_to": 2021}
+      },
+      "request": {"session_id": null, "message": "BMW 3 Series 320i 2021", "user_id": "scenario-user"},
+      "expect": {
+        "status": 200,
+        "body": {"workflow_state": {"equals": "AWAITING_ACTION"}, "reply": {"regex": "^Found BMW 3 Series"}}
+      }
+    },
+    {
+      "name": "switch to a Honda Amaze VX 2021",
+      "llm": {
+        "intent": "ITEM_LOOKUP",
+        "car": {"make": "Honda", "model": "Amaze", "variant": "VX", "year_from": 2021, "year_to": 2021}
+      },
+      "request": {"session_id": "$session", "message": "actually, find me a Honda Amaze VX 2021 instead"},
+      "expect": {
+        "status": 200,
+        "body": {
+          "session_id": {"equals": "$session"},
+          "workflow_state": {"equals": "AWAITING_ACTION"},
+          "reply": {"regex": "^Found Honda Amaze VX \\(2021\\)"},
+          "suggested_actions": {"equals": ["Get dealer details", "Schedule a call", "Find another car"]}
+        }
+      }
+    }
+  ]
+}

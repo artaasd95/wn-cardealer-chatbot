@@ -1,0 +1,81 @@
+{
+  "id": "edge_06_unrelated_question",
+  "title": "Questions outside the three tasks are declined gracefully",
+  "suite": "edge",
+  "description": "Weather, jokes and small talk route to UNKNOWN: the bot explains what it can do instead of inventing an answer.",
+  "plan_refs": [
+    "plan.md §3 Session: User asks unrelated question"
+  ],
+  "tags": [
+    "session"
+  ],
+  "steps": [
+    {
+      "name": "ask about the weather",
+      "llm": {
+        "intent": "UNKNOWN"
+      },
+      "request": {
+        "session_id": null,
+        "message": "What's the weather like in Mumbai?",
+        "user_id": "scenario-user"
+      },
+      "expect": {
+        "status": 200,
+        "body": {
+          "reply": {
+            "any_of": [
+              {
+                "regex": "didn't understand"
+              },
+              {
+                "regex": "not sure"
+              }
+            ],
+            "must_not": [
+              {
+                "regex": "(?i)degrees|rain|sunny|temperature"
+              }
+            ]
+          },
+          "workflow_state": {
+            "in": [
+              "START",
+              "AWAITING_CAR"
+            ]
+          },
+          "suggested_actions": {
+            "equals": [
+              "Find a car"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "ask for a joke",
+      "llm": {
+        "intent": "UNKNOWN"
+      },
+      "request": {
+        "session_id": "$session",
+        "message": "Tell me a joke"
+      },
+      "expect": {
+        "status": 200,
+        "body": {
+          "reply": {
+            "any_of": [
+              {
+                "regex": "didn't understand"
+              },
+              {
+                "regex": "not sure"
+              }
+            ]
+          }
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,151 @@
+{
+  "id": "edge_18_another_dealer",
+  "title": "User asks for another dealer / a dealer that does not exist",
+  "suite": "edge",
+  "description": "There is no dealer-to-dealer navigation in the product: the request is answered with the currently selected dealer or with guidance, never with a fabricated dealer row.",
+  "plan_refs": [
+    "plan.md §3 Dealer details: User asks for another dealer",
+    "plan.md §3 Dealer details: Dealer doesn't exist"
+  ],
+  "tags": [
+    "dealer_details"
+  ],
+  "steps": [
+    {
+      "name": "select a car and look at its dealer",
+      "llm": {
+        "intent": "ITEM_LOOKUP",
+        "car": {
+          "make": "BMW",
+          "model": "3 Series",
+          "variant": "320i",
+          "year_from": 2021,
+          "year_to": 2021
+        }
+      },
+      "request": {
+        "session_id": null,
+        "message": "BMW 3 Series 320i 2021",
+        "user_id": "scenario-user"
+      },
+      "expect": {
+        "status": 200,
+        "body": {
+          "workflow_state": {
+            "equals": "AWAITING_ACTION"
+          }
+        }
+      }
+    },
+    {
+      "name": "show the dealer details",
+      "llm": {
+        "intent": "DEALER_DETAILS",
+        "reply": ""
+      },
+      "request": {
+        "session_id": "$session",
+        "message": "dealer details"
+      },
+      "expect": {
+        "status": 200,
+        "body": {
+          "workflow_state": {
+            "equals": "DEALER_DETAILS_SHOWN"
+          }
+        }
+      }
+    },
+    {
+      "name": "ask for a different dealer",
+      "llm": {
+        "intent": "DEALER_DETAILS",
+        "reply": ""
+      },
+      "request": {
+        "session_id": "$session",
+        "message": "show me a different dealer, not this one"
+      },
+      "expect": {
+        "status": 200,
+        "body": {
+          "reply": {
+            "any_of": [
+              {
+                "regex": "(?i)prestige cars"
+              },
+              {
+                "regex": "(?i)no dealer selected"
+              },
+              {
+                "regex": "(?i)didn't understand"
+              },
+              {
+                "regex": "(?i)another|different|currently"
+              }
+            ],
+            "must_not": [
+              {
+                "regex": "(?i)traceback|exception|<html"
+              }
+            ]
+          },
+          "workflow_state": {
+            "in": [
+              "DEALER_DETAILS_SHOWN",
+              "AWAITING_ACTION"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "name a dealer that does not exist",
+      "llm": {
+        "intent": "DEALER_DETAILS"
+      },
+      "request": {
+        "session_id": "$session",
+        "message": "what about Veloce Motors, show me them"
+      },
+      "expect": {
+        "status": 200,
+        "body": {
+          "reply": {
+            "any_of": [
+              {
+                "regex": "(?i)prestige cars"
+              },
+              {
+                "regex": "(?i)no dealer selected"
+              },
+              {
+                "regex": "(?i)didn't understand"
+              },
+              {
+                "regex": "(?i)dealer not found"
+              }
+            ],
+            "must_not": [
+              {
+                "regex": "(?i)veloce motors \\("
+              }
+            ]
+          },
+          "workflow_state": {
+            "in": [
+              "START",
+              "AWAITING_CAR",
+              "CAR_SELECTED",
+              "CAR_NOT_FOUND",
+              "AWAITING_ACTION",
+              "DEALER_DETAILS_SHOWN",
+              "AWAITING_DATETIME",
+              "SCHEDULE_CONFIRMED"
+            ]
+          }
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,59 @@
+{
+  "id": "normal_04_full_flow_lookup_dealer_schedule",
+  "title": "Full assignment flow: lookup, dealer details, schedule",
+  "suite": "normal",
+  "description": "The complete required conversation. Every turn must advance the session along a legal edge of the state machine: AWAITING_ACTION -> DEALER_DETAILS_SHOWN -> SCHEDULE_CONFIRMED.",
+  "plan_refs": ["plan.md §2 Core request flow", "plan.md §2 State transitions", "plan.md Phase 8: full turn over HTTP"],
+  "tags": ["item_lookup", "dealer_details", "schedule_call", "happy_path", "state_machine"],
+  "steps": [
+    {
+      "name": "1. identify the car",
+      "llm": {
+        "intent": "ITEM_LOOKUP",
+        "car": {"make": "BMW", "model": "3 Series", "variant": "320i", "year_from": 2021, "year_to": 2021}
+      },
+      "request": {"session_id": null, "message": "I'm looking for a BMW 3 Series 320i 2021", "user_id": "scenario-user"},
+      "expect": {
+        "status": 200,
+        "body": {
+          "session_id": {"regex": "^[0-9a-fA-F-]{36}$"},
+          "workflow_state": {"equals": "AWAITING_ACTION"},
+          "reply": {"regex": "^Found BMW 3 Series 320i \\(2021\\)"},
+          "suggested_actions": {"equals": ["Get dealer details", "Schedule a call", "Find another car"]}
+        }
+      }
+    },
+    {
+      "name": "2. retrieve the dealer information",
+      "llm": {"intent": "DEALER_DETAILS", "reply": ""},
+      "request": {"session_id": "$session", "message": "now show me the dealer details"},
+      "expect": {
+        "status": 200,
+        "body": {
+          "session_id": {"equals": "$session"},
+          "workflow_state": {"equals": "DEALER_DETAILS_SHOWN"},
+          "reply": {"all_of": [{"regex": "Prestige Cars"}, {"regex": "Bangalore"}]},
+          "suggested_actions": {"equals": ["Schedule a call", "Find another car"]}
+        }
+      }
+    },
+    {
+      "name": "3. schedule the call",
+      "llm": {
+        "intent": "SCHEDULE_CALL",
+        "schedule": {"date_raw": "2030-05-15", "time_raw": "15:00", "timezone": "UTC"},
+        "reply": ""
+      },
+      "request": {"session_id": "$session", "message": "please schedule a call for 2030-05-15 at 15:00 UTC"},
+      "expect": {
+        "status": 200,
+        "body": {
+          "session_id": {"equals": "$session"},
+          "workflow_state": {"equals": "SCHEDULE_CONFIRMED"},
+          "reply": {"all_of": [{"regex": "(book|schedul|confirm)"}], "must_not": [{"regex": "(could not|failed)"}]},
+          "suggested_actions": {"equals": ["Find another car", "Get dealer details"]}
+        }
+      }
+    }
+  ]
+}

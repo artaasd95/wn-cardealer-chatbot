@@ -1,0 +1,130 @@
+{
+  "id": "edge_04_change_task_mid_flow",
+  "title": "User changes task mid-flow",
+  "suite": "edge",
+  "description": "While the bot is still collecting a car, the user jumps to scheduling and then to dealer details. Each jump is answered in-band on a legal state, never with a 500 or an illegal transition.",
+  "plan_refs": [
+    "plan.md §3 Session: User changes task mid flow"
+  ],
+  "tags": [
+    "session",
+    "state_machine"
+  ],
+  "steps": [
+    {
+      "name": "start a lookup that matches several cars",
+      "llm": {
+        "intent": "ITEM_LOOKUP",
+        "car": {
+          "make": "BMW",
+          "model": "3 Series"
+        }
+      },
+      "request": {
+        "session_id": null,
+        "message": "I want a BMW 3 Series",
+        "user_id": "scenario-user"
+      },
+      "expect": {
+        "status": 200,
+        "body": {
+          "workflow_state": {
+            "equals": "AWAITING_CAR"
+          }
+        }
+      }
+    },
+    {
+      "name": "switch to scheduling before picking a car",
+      "llm": {
+        "intent": "SCHEDULE_CALL",
+        "schedule": {
+          "date_raw": "2030-05-15",
+          "time_raw": "15:00"
+        }
+      },
+      "request": {
+        "session_id": "$session",
+        "message": "actually, schedule a call for 2030-05-15 at 15:00"
+      },
+      "expect": {
+        "status": 200,
+        "body": {
+          "reply": {
+            "regex": "(?i)(no dealer selected|no car selected|pick one|which of these)"
+          },
+          "workflow_state": {
+            "in": [
+              "START",
+              "AWAITING_CAR",
+              "CAR_SELECTED",
+              "CAR_NOT_FOUND",
+              "AWAITING_ACTION",
+              "DEALER_DETAILS_SHOWN",
+              "AWAITING_DATETIME",
+              "SCHEDULE_CONFIRMED"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "switch to dealer details next",
+      "llm": {
+        "intent": "DEALER_DETAILS"
+      },
+      "request": {
+        "session_id": "$session",
+        "message": "and show me the dealer details too"
+      },
+      "expect": {
+        "status": 200,
+        "body": {
+          "reply": {
+            "regex": "(?i)(no dealer selected|didn't understand)"
+          },
+          "workflow_state": {
+            "in": [
+              "START",
+              "AWAITING_CAR",
+              "CAR_SELECTED",
+              "CAR_NOT_FOUND",
+              "AWAITING_ACTION",
+              "DEALER_DETAILS_SHOWN",
+              "AWAITING_DATETIME",
+              "SCHEDULE_CONFIRMED"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "go back to the lookup and finish it",
+      "llm": {
+        "intent": "ITEM_LOOKUP",
+        "car": {
+          "make": "BMW",
+          "model": "3 Series",
+          "variant": "320i",
+          "year_from": 2021,
+          "year_to": 2021
+        }
+      },
+      "request": {
+        "session_id": "$session",
+        "message": "ok just give me the 320i of 2021"
+      },
+      "expect": {
+        "status": 200,
+        "body": {
+          "reply": {
+            "regex": "(?i)^Found BMW 3 Series 320i \\(2021\\)"
+          },
+          "workflow_state": {
+            "equals": "AWAITING_ACTION"
+          }
+        }
+      }
+    }
+  ]
+}

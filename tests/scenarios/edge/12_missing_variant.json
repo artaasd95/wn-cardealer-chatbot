@@ -1,0 +1,59 @@
+{
+  "id": "edge_12_missing_variant",
+  "title": "Car with no variant and no price band (seeded row C-9002)",
+  "suite": "edge",
+  "description": "The seeded Nissan Kicks of 2023 has an empty variant and unusable price fields; the reply shows placeholders instead of crashing or inventing a price.",
+  "plan_refs": [
+    "plan.md §3 Item lookup: Missing variant",
+    "plan.md §3 Item lookup: Invalid/incomplete car data"
+  ],
+  "tags": [
+    "item_lookup",
+    "seeded_edge_row"
+  ],
+  "steps": [
+    {
+      "name": "ask for the 2023 Nissan Kicks",
+      "llm": {
+        "intent": "ITEM_LOOKUP",
+        "car": {
+          "make": "Nissan",
+          "model": "Kicks",
+          "year_from": 2023,
+          "year_to": 2023
+        }
+      },
+      "request": {
+        "session_id": null,
+        "message": "tell me about the 2023 Nissan Kicks",
+        "user_id": "scenario-user"
+      },
+      "expect": {
+        "status": 200,
+        "body": {
+          "workflow_state": {
+            "equals": "AWAITING_ACTION"
+          },
+          "reply": {
+            "all_of": [
+              {
+                "regex": "^Found Nissan Kicks \\(2023\\)"
+              },
+              {
+                "regex": "Ask the dealer"
+              },
+              {
+                "regex": "MileStar Auto in Chandigarh"
+              }
+            ],
+            "must_not": [
+              {
+                "regex": "(?i)traceback|exception|<html"
+              }
+            ]
+          }
+        }
+      }
+    }
+  ]
+}

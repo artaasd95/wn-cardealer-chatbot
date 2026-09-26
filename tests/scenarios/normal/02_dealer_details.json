@@ -1,0 +1,43 @@
+{
+  "id": "normal_02_dealer_details",
+  "title": "Dealer details for the selected car",
+  "suite": "normal",
+  "description": "After a lookup the user asks for the dealer's contact details; the reply carries the name, city, phone, email and rating from the dealer row.",
+  "plan_refs": ["plan.md §2 Dealer-details flow", "plan.md §3 Dealer details (happy path)"],
+  "tags": ["dealer_details", "happy_path"],
+  "steps": [
+    {
+      "name": "select the BMW 3 Series 320i 2021",
+      "llm": {
+        "intent": "ITEM_LOOKUP",
+        "car": {"make": "BMW", "model": "3 Series", "variant": "320i", "year_from": 2021, "year_to": 2021}
+      },
+      "request": {"session_id": null, "message": "BMW 3 Series 320i 2021", "user_id": "scenario-user"},
+      "expect": {
+        "status": 200,
+        "body": {"workflow_state": {"equals": "AWAITING_ACTION"}}
+      }
+    },
+    {
+      "name": "ask for the dealer details",
+      "llm": {"intent": "DEALER_DETAILS", "reply": ""},
+      "request": {"session_id": "$session", "message": "show me the dealer details"},
+      "expect": {
+        "status": 200,
+        "body": {
+          "session_id": {"regex": "^[0-9a-fA-F-]{36}$"},
+          "workflow_state": {"equals": "DEALER_DETAILS_SHOWN"},
+          "reply": {
+            "all_of": [
+              {"regex": "Prestige Cars"},
+              {"regex": "Bangalore"},
+              {"regex": "\\+91-80-2552-1003|Phone|contact"}
+            ]
+          },
+          "suggested_actions": {"equals": ["Schedule a call", "Find another car"]},
+          "requires_input": {"equals": true}
+        }
+      }
+    }
+  ]
+}

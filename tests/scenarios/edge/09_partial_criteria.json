@@ -1,0 +1,131 @@
+{
+  "id": "edge_09_partial_criteria",
+  "title": "Make only, model only, variant only",
+  "suite": "edge",
+  "description": "Partial criteria never crash and never pick silently: the bot either disambiguates (many matches) or finds the one row that really matches.",
+  "plan_refs": [
+    "plan.md §3 Item lookup: Make only",
+    "plan.md §3 Item lookup: Model only",
+    "plan.md §3 Item lookup: Variant only"
+  ],
+  "tags": [
+    "item_lookup"
+  ],
+  "steps": [
+    {
+      "name": "make only (BMW)",
+      "llm": {
+        "intent": "ITEM_LOOKUP",
+        "car": {
+          "make": "BMW"
+        }
+      },
+      "request": {
+        "session_id": null,
+        "message": "what BMWs do you have?",
+        "user_id": "scenario-user"
+      },
+      "expect": {
+        "status": 200,
+        "body": {
+          "reply": {
+            "any_of": [
+              {
+                "regex": "several matches"
+              },
+              {
+                "regex": "Which of these"
+              },
+              {
+                "regex": "^Found "
+              }
+            ]
+          },
+          "workflow_state": {
+            "in": [
+              "AWAITING_CAR",
+              "AWAITING_ACTION",
+              "CAR_SELECTED"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "model only (3 Series)",
+      "llm": {
+        "intent": "ITEM_LOOKUP",
+        "car": {
+          "model": "3 Series"
+        }
+      },
+      "request": {
+        "session_id": null,
+        "message": "do you have any 3 Series?"
+      },
+      "expect": {
+        "status": 200,
+        "body": {
+          "reply": {
+            "any_of": [
+              {
+                "regex": "several matches"
+              },
+              {
+                "regex": "Which of these"
+              },
+              {
+                "regex": "^Found "
+              }
+            ]
+          },
+          "workflow_state": {
+            "in": [
+              "AWAITING_CAR",
+              "AWAITING_ACTION",
+              "CAR_SELECTED"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "variant only (320i)",
+      "llm": {
+        "intent": "ITEM_LOOKUP",
+        "car": {
+          "variant": "320i"
+        }
+      },
+      "request": {
+        "session_id": null,
+        "message": "I'm after the 320i trim"
+      },
+      "expect": {
+        "status": 200,
+        "body": {
+          "reply": {
+            "any_of": [
+              {
+                "regex": "several matches"
+              },
+              {
+                "regex": "Which of these"
+              },
+              {
+                "regex": "^Found "
+              }
+            ]
+          },
+          "workflow_state": {
+            "in": [
+              "AWAITING_CAR",
+              "AWAITING_ACTION",
+              "CAR_SELECTED"
+            ]
+          }
+        }
+      }
+    }
+  ]
+}

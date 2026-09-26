@@ -1,0 +1,23 @@
+{
+  "id": "normal_09_health_check",
+  "title": "Health endpoint reports liveness and provider",
+  "suite": "normal",
+  "description": "GET /api/health reports liveness plus the resolved provider name and never the API key.",
+  "plan_refs": ["plan.md Phase 7: GET /health", "plan.md §3 LLM provider / configuration"],
+  "tags": ["health", "happy_path"],
+  "steps": [
+    {
+      "name": "ask for health",
+      "method": "GET",
+      "path": "/api/health",
+      "expect": {
+        "status": 200,
+        "body": {
+          "status": {"equals": "healthy"},
+          "llm_provider": {"regex": "^[a-z_]+$", "must_not": [{"regex": "sk-|key|token"}]},
+          "database": {"equals": "connected"}
+        }
+      }
+    }
+  ]
+}

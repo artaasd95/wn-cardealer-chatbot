@@ -1,0 +1,103 @@
+{
+  "id": "edge_13_car_without_dealer",
+  "title": "Car exists but its dealer does not (seeded row C-9004 -> D-999)",
+  "suite": "edge",
+  "description": "The seeded Tata Punch Creative S references a missing dealer. The car is still selected, the reply carries no dealer sentence, and both follow-up tasks answer with the pick-a-car guard instead of failing.",
+  "plan_refs": [
+    "plan.md §3 Item lookup: Car exists but dealer doesn't",
+    "plan.md §3 Dealer details: No selected dealer",
+    "plan.md §3 Schedule: No selected dealer"
+  ],
+  "tags": [
+    "item_lookup",
+    "dealer_details",
+    "schedule_call",
+    "seeded_edge_row"
+  ],
+  "steps": [
+    {
+      "name": "select the Tata Punch Creative S 2024",
+      "llm": {
+        "intent": "ITEM_LOOKUP",
+        "car": {
+          "make": "Tata",
+          "model": "Punch",
+          "variant": "Creative S",
+          "year_from": 2024,
+          "year_to": 2024
+        }
+      },
+      "request": {
+        "session_id": null,
+        "message": "Tata Punch Creative S 2024",
+        "user_id": "scenario-user"
+      },
+      "expect": {
+        "status": 200,
+        "body": {
+          "workflow_state": {
+            "equals": "CAR_SELECTED"
+          },
+          "reply": {
+            "all_of": [
+              {
+                "regex": "^Found Tata Punch Creative S \\(2024\\)"
+              }
+            ],
+            "must_not": [
+              {
+                "regex": "can help you with it"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "ask for dealer details anyway",
+      "llm": {
+        "intent": "DEALER_DETAILS"
+      },
+      "request": {
+        "session_id": "$session",
+        "message": "show me the dealer details"
+      },
+      "expect": {
+        "status": 200,
+        "body": {
+          "reply": {
+            "regex": "(?i)^No dealer selected"
+          },
+          "workflow_state": {
+            "equals": "CAR_SELECTED"
+          }
+        }
+      }
+    },
+    {
+      "name": "try to schedule without a dealer",
+      "llm": {
+        "intent": "SCHEDULE_CALL",
+        "schedule": {
+          "date_raw": "2030-05-15",
+          "time_raw": "15:00"
+        }
+      },
+      "request": {
+        "session_id": "$session",
+        "message": "schedule a call for 2030-05-15 at 15:00"
+      },
+      "expect": {
+        "status": 200,
+        "body": {
+          "reply": {
+            "regex": "(?i)^No dealer selected"
+          },
+          "workflow_state": {
+            "equals": "CAR_SELECTED"
+          }
+        }
+      }
+    }
+  ]
+}

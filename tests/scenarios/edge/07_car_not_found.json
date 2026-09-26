@@ -1,0 +1,88 @@
+{
+  "id": "edge_07_car_not_found",
+  "title": "Car not found, then recovery",
+  "suite": "edge",
+  "description": "Zero matches produce the not-found clarification and CAR_NOT_FOUND; the very next turn can search again successfully.",
+  "plan_refs": [
+    "plan.md §3 Item lookup: Car not found"
+  ],
+  "tags": [
+    "item_lookup"
+  ],
+  "steps": [
+    {
+      "name": "ask for a car the catalog does not have",
+      "llm": {
+        "intent": "ITEM_LOOKUP",
+        "car": {
+          "make": "Ferrari",
+          "model": "F40"
+        }
+      },
+      "request": {
+        "session_id": null,
+        "message": "Do you have a Ferrari F40?",
+        "user_id": "scenario-user"
+      },
+      "expect": {
+        "status": 200,
+        "body": {
+          "workflow_state": {
+            "equals": "CAR_NOT_FOUND"
+          },
+          "reply": {
+            "all_of": [
+              {
+                "regex": "(?i)couldn't find a car matching"
+              },
+              {
+                "regex": "(?i)different make, model or year"
+              }
+            ],
+            "must_not": [
+              {
+                "regex": "(?i)found (a |an )?ferrari"
+              }
+            ]
+          },
+          "suggested_actions": {
+            "equals": [
+              "Find a car"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "recover with a query that matches",
+      "llm": {
+        "intent": "ITEM_LOOKUP",
+        "car": {
+          "make": "BMW",
+          "model": "3 Series",
+          "variant": "320i",
+          "year_from": 2021,
+          "year_to": 2021
+        }
+      },
+      "request": {
+        "session_id": "$session",
+        "message": "ok, what about a BMW 3 Series 320i 2021?"
+      },
+      "expect": {
+        "status": 200,
+        "body": {
+          "session_id": {
+            "equals": "$session"
+          },
+          "workflow_state": {
+            "equals": "AWAITING_ACTION"
+          },
+          "reply": {
+            "regex": "(?i)^Found BMW 3 Series 320i \\(2021\\)"
+          }
+        }
+      }
+    }
+  ]
+}

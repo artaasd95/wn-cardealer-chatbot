@@ -1,0 +1,70 @@
+{
+  "id": "edge_20_schedule_ambiguous",
+  "title": "Ambiguous date, time and timezone",
+  "suite": "edge",
+  "description": "10/01/2027 is day-first or month-first, 'Friday at 3' needs morning/afternoon, 'tomorrow afternoon' needs an hour, and an unrecognized timezone is asked for — never guessed.",
+  "plan_refs": [
+    "plan.md §3 Schedule: Ambiguous date",
+    "plan.md §3 Schedule: Ambiguous time",
+    "plan.md §3 Schedule: Ambiguous timezone",
+    "plan.md §3 Schedule: \"Tomorrow afternoon\"",
+    "plan.md §3 Schedule: \"Friday at 3\""
+  ],
+  "tags": ["schedule_call"],
+  "steps": [
+    {
+      "name": "select the BMW 3 Series 320i 2021 first",
+      "llm": {"intent": "ITEM_LOOKUP", "car": {"make": "BMW", "model": "3 Series", "variant": "320i", "year_from": 2021, "year_to": 2021}},
+      "request": {"session_id": null, "message": "BMW 3 Series 320i 2021", "user_id": "scenario-user"},
+      "expect": {"status": 200, "body": {"workflow_state": {"equals": "AWAITING_ACTION"}}}
+    },
+    {
+      "name": "ambiguous numeric date",
+      "llm": {"intent": "SCHEDULE_CALL", "schedule": {"date_raw": "10/01/2027", "time_raw": "3pm"}},
+      "request": {"session_id": "$session", "message": "book for 10/01/2027 at 3pm"},
+      "expect": {
+        "status": 200,
+        "body": {
+          "reply": {"regex": "(?i)day-first or month-first"},
+          "workflow_state": {"equals": "AWAITING_DATETIME"}
+        }
+      }
+    },
+    {
+      "name": "ambiguous hour: Friday at 3",
+      "llm": {"intent": "SCHEDULE_CALL", "schedule": {"date_raw": "Friday", "time_raw": "3"}},
+      "request": {"session_id": "$session", "message": "Friday at 3 then"},
+      "expect": {
+        "status": 200,
+        "body": {
+          "reply": {"regex": "(?i)morning or in the afternoon"},
+          "workflow_state": {"equals": "AWAITING_DATETIME"}
+        }
+      }
+    },
+    {
+      "name": "part of day only: tomorrow afternoon",
+      "llm": {"intent": "SCHEDULE_CALL", "schedule": {"date_raw": "tomorrow", "time_raw": "afternoon"}},
+      "request": {"session_id": "$session", "message": "ok, tomorrow afternoon"},
+      "expect": {
+        "status": 200,
+        "body": {
+          "reply": {"regex": "(?i)What time in the afternoon"},
+          "workflow_state": {"equals": "AWAITING_DATETIME"}
+        }
+      }
+    },
+    {
+      "name": "unrecognized timezone",
+      "llm": {"intent": "SCHEDULE_CALL", "schedule": {"date_raw": "2030-05-15", "time_raw": "3pm", "timezone": "Middle Earth"}},
+      "request": {"session_id": "$session", "message": "2030-05-15 at 3pm, Middle Earth time"},
+      "expect": {
+        "status": 200,
+        "body": {
+          "reply": {"all_of": [{"regex": "(?i)time ?zone"}, {"regex": "(?i)Middle Earth"}]},
+          "workflow_state": {"equals": "AWAITING_DATETIME"}
+        }
+      }
+    }
+  ]
+}

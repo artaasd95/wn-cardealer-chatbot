@@ -1,0 +1,49 @@
+{
+  "id": "normal_05_disambiguation_then_pick",
+  "title": "Several matches, then the user picks one",
+  "suite": "normal",
+  "description": "A model-only query returns many cars; the bot lists candidates instead of guessing, and the user's follow-up pins one car.",
+  "plan_refs": ["plan.md §2 Item lookup flow: >1 results -> DISAMBIGUATION", "plan.md §3 Item lookup: Multiple cars match"],
+  "tags": ["item_lookup", "disambiguation", "happy_path"],
+  "steps": [
+    {
+      "name": "ask for a BMW 3 Series without further detail",
+      "llm": {"intent": "ITEM_LOOKUP", "car": {"make": "BMW", "model": "3 Series"}},
+      "request": {"session_id": null, "message": "I want a BMW 3 Series", "user_id": "scenario-user"},
+      "expect": {
+        "status": 200,
+        "body": {
+          "workflow_state": {"equals": "AWAITING_CAR"},
+          "reply": {
+            "all_of": [
+              {"regex": "^I found several matches\\."},
+              {"regex": "Which of these did you mean\\?"},
+              {"regex": "Pick one: "}
+            ]
+          },
+          "suggested_actions": {
+            "contains_all": ["320i \\(2019\\)", "320i \\(2020\\)", "330i"],
+            "max_items": 5
+          }
+        }
+      }
+    },
+    {
+      "name": "pick the 320i of 2021 from the list",
+      "llm": {
+        "intent": "ITEM_LOOKUP",
+        "car": {"make": "BMW", "model": "3 Series", "variant": "320i", "year_from": 2021, "year_to": 2021}
+      },
+      "request": {"session_id": "$session", "message": "the 320i from 2021, please"},
+      "expect": {
+        "status": 200,
+        "body": {
+          "session_id": {"equals": "$session"},
+          "workflow_state": {"equals": "AWAITING_ACTION"},
+          "reply": {"regex": "^Found BMW 3 Series 320i \\(2021\\)"},
+          "suggested_actions": {"equals": ["Get dealer details", "Schedule a call", "Find another car"]}
+        }
+      }
+    }
+  ]
+}

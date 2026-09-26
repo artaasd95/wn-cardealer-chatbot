@@ -1,0 +1,117 @@
+{
+  "id": "edge_16_details_before_or_without_selection",
+  "title": "Dealer details before any car is selected",
+  "suite": "edge",
+  "description": "Dealer details asked at the very start, or while a lookup is still ambiguous, are answered with an explanation instead of a fabricated dealer.",
+  "plan_refs": [
+    "plan.md §3 Dealer details: User requests dealer details before car lookup",
+    "plan.md §3 Dealer details: No selected car",
+    "plan.md §3 Dealer details: No selected dealer"
+  ],
+  "tags": [
+    "dealer_details",
+    "session"
+  ],
+  "steps": [
+    {
+      "name": "ask for dealer details as the very first message",
+      "llm": {
+        "intent": "DEALER_DETAILS"
+      },
+      "request": {
+        "session_id": null,
+        "message": "What's the dealer's phone number?",
+        "user_id": "scenario-user"
+      },
+      "expect": {
+        "status": 200,
+        "body": {
+          "reply": {
+            "any_of": [
+              {
+                "regex": "(?i)didn't understand"
+              },
+              {
+                "regex": "(?i)not sure"
+              },
+              {
+                "regex": "(?i)no dealer selected"
+              },
+              {
+                "regex": "(?i)pick a car"
+              }
+            ],
+            "must_not": [
+              {
+                "regex": "(?i)traceback|exception|<html"
+              }
+            ]
+          },
+          "workflow_state": {
+            "in": [
+              "START",
+              "AWAITING_CAR"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "run an ambiguous lookup first",
+      "llm": {
+        "intent": "ITEM_LOOKUP",
+        "car": {
+          "make": "BMW",
+          "model": "3 Series"
+        }
+      },
+      "request": {
+        "session_id": "$session",
+        "message": "I want a BMW 3 Series"
+      },
+      "expect": {
+        "status": 200,
+        "body": {
+          "workflow_state": {
+            "equals": "AWAITING_CAR"
+          }
+        }
+      }
+    },
+    {
+      "name": "ask for dealer details with nothing selected yet",
+      "llm": {
+        "intent": "DEALER_DETAILS"
+      },
+      "request": {
+        "session_id": "$session",
+        "message": "now the dealer details please"
+      },
+      "expect": {
+        "status": 200,
+        "body": {
+          "reply": {
+            "any_of": [
+              {
+                "regex": "(?i)^No dealer selected"
+              },
+              {
+                "regex": "(?i)pick one"
+              },
+              {
+                "regex": "(?i)which of these"
+              }
+            ]
+          },
+          "workflow_state": {
+            "in": [
+              "AWAITING_CAR",
+              "CAR_SELECTED",
+              "AWAITING_ACTION"
+            ]
+          }
+        }
+      }
+    }
+  ]
+}

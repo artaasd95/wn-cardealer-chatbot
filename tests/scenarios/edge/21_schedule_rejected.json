@@ -1,0 +1,52 @@
+{
+  "id": "edge_21_schedule_rejected",
+  "title": "Past dates and unreadable date/time text",
+  "suite": "edge",
+  "description": "A past appointment is refused before any write; unreadable date or time text asks again with examples. Nothing is booked in any of these cases.",
+  "plan_refs": ["plan.md §3 Schedule: Past date/time", "plan.md §3 Schedule: Invalid date", "plan.md §3 Schedule: Invalid time"],
+  "tags": ["schedule_call"],
+  "steps": [
+    {
+      "name": "select the BMW 3 Series 320i 2021 first",
+      "llm": {"intent": "ITEM_LOOKUP", "car": {"make": "BMW", "model": "3 Series", "variant": "320i", "year_from": 2021, "year_to": 2021}},
+      "request": {"session_id": null, "message": "BMW 3 Series 320i 2021", "user_id": "scenario-user"},
+      "expect": {"status": 200, "body": {"workflow_state": {"equals": "AWAITING_ACTION"}}}
+    },
+    {
+      "name": "a date in the past",
+      "llm": {"intent": "SCHEDULE_CALL", "schedule": {"date_raw": "2020-01-01", "time_raw": "10am"}},
+      "request": {"session_id": "$session", "message": "schedule it for 2020-01-01 at 10am"},
+      "expect": {
+        "status": 200,
+        "body": {
+          "reply": {"all_of": [{"regex": "(?i)already passed"}], "must_not": [{"regex": "(?i)booked for"}]},
+          "workflow_state": {"equals": "AWAITING_DATETIME"}
+        }
+      }
+    },
+    {
+      "name": "an unreadable date",
+      "llm": {"intent": "SCHEDULE_CALL", "schedule": {"date_raw": "32 Octember", "time_raw": "10am"}},
+      "request": {"session_id": "$session", "message": "the 32nd of Octember at 10am"},
+      "expect": {
+        "status": 200,
+        "body": {
+          "reply": {"all_of": [{"regex": "(?i)could not read the date"}], "must_not": [{"regex": "(?i)booked for"}]},
+          "workflow_state": {"equals": "AWAITING_DATETIME"}
+        }
+      }
+    },
+    {
+      "name": "an unreadable time",
+      "llm": {"intent": "SCHEDULE_CALL", "schedule": {"date_raw": "2030-05-15", "time_raw": "25:99"}},
+      "request": {"session_id": "$session", "message": "2030-05-15 at 25:99"},
+      "expect": {
+        "status": 200,
+        "body": {
+          "reply": {"all_of": [{"regex": "(?i)could not read the time"}], "must_not": [{"regex": "(?i)booked for"}]},
+          "workflow_state": {"equals": "AWAITING_DATETIME"}
+        }
+      }
+    }
+  ]
+}

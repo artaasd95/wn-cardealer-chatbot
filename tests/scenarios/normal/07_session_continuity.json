@@ -1,0 +1,52 @@
+{
+  "id": "normal_07_session_continuity",
+  "title": "Session state carries across turns",
+  "suite": "normal",
+  "description": "The same session id threads through the conversation; the selection made in turn one is still active in turn two.",
+  "plan_refs": ["plan.md §2 Session memory", "plan.md §3 Session / conversation"],
+  "tags": ["session", "happy_path"],
+  "steps": [
+    {
+      "name": "select a car in a fresh session",
+      "llm": {
+        "intent": "ITEM_LOOKUP",
+        "car": {"make": "BMW", "model": "3 Series", "variant": "320i", "year_from": 2021, "year_to": 2021}
+      },
+      "request": {"session_id": null, "message": "BMW 3 Series 320i 2021", "user_id": "scenario-user"},
+      "expect": {
+        "status": 200,
+        "body": {"session_id": {"regex": "^[0-9a-fA-F-]{36}$"}, "workflow_state": {"equals": "AWAITING_ACTION"}}
+      }
+    },
+    {
+      "name": "continue in the same session",
+      "llm": {"intent": "DEALER_DETAILS", "reply": ""},
+      "request": {"session_id": "$session", "message": "dealer details please"},
+      "expect": {
+        "status": 200,
+        "body": {
+          "session_id": {"equals": "$session"},
+          "workflow_state": {"equals": "DEALER_DETAILS_SHOWN"},
+          "reply": {"regex": "Prestige Cars"}
+        }
+      }
+    },
+    {
+      "name": "the selection survives the third turn",
+      "llm": {
+        "intent": "SCHEDULE_CALL",
+        "schedule": {"date_raw": "2030-05-15", "time_raw": "15:00", "timezone": "UTC"},
+        "reply": ""
+      },
+      "request": {"session_id": "$session", "message": "schedule a call for 2030-05-15 at 15:00 UTC"},
+      "expect": {
+        "status": 200,
+        "body": {
+          "session_id": {"equals": "$session"},
+          "workflow_state": {"equals": "SCHEDULE_CONFIRMED"},
+          "reply": {"regex": "(book|schedul|confirm)"}
+        }
+      }
+    }
+  ]
+}

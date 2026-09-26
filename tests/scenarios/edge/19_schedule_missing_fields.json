@@ -1,0 +1,70 @@
+{
+  "id": "edge_19_schedule_missing_fields",
+  "title": "Missing date and missing time",
+  "suite": "edge",
+  "description": "The bot asks only for what is missing and carries the rest across turns: a time without a date asks for the date, a date without a time asks for the time, and nothing at all asks for both.",
+  "plan_refs": ["plan.md §3 Schedule: Missing date", "plan.md §3 Schedule: Missing time"],
+  "tags": ["schedule_call"],
+  "steps": [
+    {
+      "name": "select the BMW 3 Series 320i 2021 first",
+      "llm": {"intent": "ITEM_LOOKUP", "car": {"make": "BMW", "model": "3 Series", "variant": "320i", "year_from": 2021, "year_to": 2021}},
+      "request": {"session_id": null, "message": "BMW 3 Series 320i 2021", "user_id": "scenario-user"},
+      "expect": {"status": 200, "body": {"workflow_state": {"equals": "AWAITING_ACTION"}}}
+    },
+    {
+      "name": "ask for a call without date or time",
+      "llm": {"intent": "SCHEDULE_CALL", "schedule": {}},
+      "request": {"session_id": "$session", "message": "I'd like to schedule a call"},
+      "expect": {
+        "status": 200,
+        "body": {
+          "reply": {"regex": "(?i)What date and time"},
+          "workflow_state": {"equals": "AWAITING_DATETIME"}
+        }
+      }
+    },
+    {
+      "name": "give only a time",
+      "llm": {"intent": "SCHEDULE_CALL", "schedule": {"time_raw": "3pm"}},
+      "request": {"session_id": "$session", "message": "at 3pm"},
+      "expect": {
+        "status": 200,
+        "body": {
+          "reply": {"all_of": [{"regex": "(?i)What date"}], "must_not": [{"regex": "(?i)booked for"}]},
+          "workflow_state": {"equals": "AWAITING_DATETIME"}
+        }
+      }
+    },
+    {
+      "name": "complete it with the date (context carry-over)",
+      "llm": {"intent": "SCHEDULE_CALL", "schedule": {"date_raw": "2030-05-15"}, "reply": ""},
+      "request": {"session_id": "$session", "message": "2030-05-15 works"},
+      "expect": {
+        "status": 200,
+        "body": {
+          "reply": {"regex": "(?i)(book|schedul|confirm)"},
+          "workflow_state": {"equals": "SCHEDULE_CONFIRMED"}
+        }
+      }
+    },
+    {
+      "name": "fresh session: a date without a time",
+      "llm": {"intent": "ITEM_LOOKUP", "car": {"make": "BMW", "model": "3 Series", "variant": "320i", "year_from": 2021, "year_to": 2021}},
+      "request": {"session_id": null, "message": "BMW 3 Series 320i 2021"},
+      "expect": {"status": 200, "body": {"workflow_state": {"equals": "AWAITING_ACTION"}}}
+    },
+    {
+      "name": "ask for a call on a date only",
+      "llm": {"intent": "SCHEDULE_CALL", "schedule": {"date_raw": "tomorrow"}},
+      "request": {"session_id": "$session", "message": "schedule a call for tomorrow"},
+      "expect": {
+        "status": 200,
+        "body": {
+          "reply": {"all_of": [{"regex": "(?i)What time"}], "must_not": [{"regex": "(?i)booked for"}]},
+          "workflow_state": {"equals": "AWAITING_DATETIME"}
+        }
+      }
+    }
+  ]
+}

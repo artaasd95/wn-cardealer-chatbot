@@ -1,0 +1,102 @@
+{
+  "id": "edge_17_incomplete_dealer_details",
+  "title": "Dealer with incomplete details (seeded row D-012, no email)",
+  "suite": "edge",
+  "description": "Honda Amaze E 2023 is sold by Apex AutoCare, a dealer row with an empty email. The details answer is partial and useful; nothing crashes and no email is invented.",
+  "plan_refs": [
+    "plan.md §3 Dealer details: Dealer has incomplete details"
+  ],
+  "tags": [
+    "dealer_details",
+    "seeded_edge_row"
+  ],
+  "steps": [
+    {
+      "name": "select the Honda Amaze E 2023 (C-0065 -> D-012)",
+      "llm": {
+        "intent": "ITEM_LOOKUP",
+        "car": {
+          "make": "Honda",
+          "model": "Amaze",
+          "variant": "E",
+          "year_from": 2023,
+          "year_to": 2023
+        }
+      },
+      "request": {
+        "session_id": null,
+        "message": "Honda Amaze E 2023",
+        "user_id": "scenario-user"
+      },
+      "expect": {
+        "status": 200,
+        "body": {
+          "reply": {
+            "any_of": [
+              {
+                "regex": "(?i)^Found Honda Amaze E "
+              },
+              {
+                "regex": "(?i)several matches"
+              }
+            ],
+            "must_not": [
+              {
+                "regex": "(?i)traceback|exception|<html"
+              }
+            ]
+          },
+          "workflow_state": {
+            "in": [
+              "AWAITING_ACTION",
+              "CAR_SELECTED",
+              "AWAITING_CAR"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "ask for the dealer details",
+      "llm": {
+        "intent": "DEALER_DETAILS",
+        "reply": ""
+      },
+      "request": {
+        "session_id": "$session",
+        "message": "dealer details"
+      },
+      "expect": {
+        "status": 200,
+        "body": {
+          "reply": {
+            "any_of": [
+              {
+                "regex": "(?i)apex autocare"
+              },
+              {
+                "regex": "(?i)^No dealer selected"
+              }
+            ],
+            "must_not": [
+              {
+                "regex": "(?i)sales@apex"
+              },
+              {
+                "regex": "(?i)traceback|exception"
+              }
+            ]
+          },
+          "workflow_state": {
+            "in": [
+              "DEALER_DETAILS_SHOWN",
+              "AWAITING_ACTION",
+              "CAR_SELECTED",
+              "AWAITING_CAR"
+            ]
+          }
+        }
+      }
+    }
+  ]
+}

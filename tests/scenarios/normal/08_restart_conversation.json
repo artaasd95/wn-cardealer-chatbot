@@ -1,0 +1,37 @@
+{
+  "id": "normal_08_restart_conversation",
+  "title": "Restarting the conversation clears the session",
+  "suite": "normal",
+  "description": "DELETE /api/sessions/{id} is the restart path: the old session is gone and the next turn starts a fresh one from START.",
+  "plan_refs": ["plan.md Phase 7: DELETE /sessions/{session_id}", "plan.md §3 Session: User restarts conversation"],
+  "tags": ["session", "happy_path", "restart"],
+  "steps": [
+    {
+      "name": "select a car",
+      "llm": {
+        "intent": "ITEM_LOOKUP",
+        "car": {"make": "BMW", "model": "3 Series", "variant": "320i", "year_from": 2021, "year_to": 2021}
+      },
+      "request": {"session_id": null, "message": "BMW 3 Series 320i 2021", "user_id": "scenario-user"},
+      "expect": {"status": 200, "body": {"workflow_state": {"equals": "AWAITING_ACTION"}}}
+    },
+    {
+      "name": "delete the session (restart)",
+      "method": "DELETE",
+      "path": "/api/sessions/$session",
+      "expect": {"status": 204}
+    },
+    {
+      "name": "the next turn is a brand-new session",
+      "llm": {"intent": "UNKNOWN"},
+      "request": {"session_id": "$session", "message": "hello, let's start over"},
+      "expect": {
+        "status": 200,
+        "body": {
+          "session_id": {"must_not": [{"equals": "$session"}], "regex": "^[0-9a-fA-F-]{36}$"},
+          "workflow_state": {"equals": "START"}
+        }
+      }
+    }
+  ]
+}

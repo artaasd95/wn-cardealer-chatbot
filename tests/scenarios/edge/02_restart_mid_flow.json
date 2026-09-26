@@ -1,0 +1,49 @@
+{
+  "id": "edge_02_restart_mid_flow",
+  "title": "User restarts the conversation mid-flow",
+  "suite": "edge",
+  "description": "While the bot is collecting a date for scheduling, the user restarts. The deleted session is replaced by a fresh one at START — no stale selection, no error.",
+  "plan_refs": ["plan.md §3 Session: User restarts conversation"],
+  "tags": ["session", "restart", "schedule_call"],
+  "steps": [
+    {
+      "name": "select a car",
+      "llm": {
+        "intent": "ITEM_LOOKUP",
+        "car": {"make": "BMW", "model": "3 Series", "variant": "320i", "year_from": 2021, "year_to": 2021}
+      },
+      "request": {"session_id": null, "message": "BMW 3 Series 320i 2021", "user_id": "scenario-user"},
+      "expect": {"status": 200, "body": {"workflow_state": {"equals": "AWAITING_ACTION"}}}
+    },
+    {
+      "name": "start scheduling without a date",
+      "llm": {"intent": "SCHEDULE_CALL", "schedule": {"time_raw": "3pm"}},
+      "request": {"session_id": "$session", "message": "schedule a call at 3pm"},
+      "expect": {
+        "status": 200,
+        "body": {
+          "workflow_state": {"equals": "AWAITING_DATETIME"},
+          "reply": {"any_of": [{"regex": "What date"}, {"regex": "What date and time"}]}
+        }
+      }
+    },
+    {
+      "name": "delete the session to restart",
+      "method": "DELETE",
+      "path": "/api/sessions/$session",
+      "expect": {"status": 204}
+    },
+    {
+      "name": "a fresh conversation begins at START",
+      "llm": {"intent": "UNKNOWN"},
+      "request": {"session_id": "$session", "message": "hi, I'd like to start from the beginning"},
+      "expect": {
+        "status": 200,
+        "body": {
+          "session_id": {"must_not": [{"equals": "$session"}]},
+          "workflow_state": {"equals": "START"}
+        }
+      }
+    }
+  ]
+}
