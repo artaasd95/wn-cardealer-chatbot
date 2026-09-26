@@ -23,8 +23,6 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
     "Typing :: Typed",
 ]
-# [project.urls] -- add once the remote is published
-# Repository = "..."
 
 dependencies = [
     # web layer
@@ -53,6 +51,12 @@ dev = [
     "httpx>=0.27",
 ]
 
+[project.urls]
+Repository = "https://github.com/artaasd95/wn-cardealer-chatbot"
+
+[project.scripts]
+cardealer = "presentation.cli:main"
+
 # src layout: the wheel ships the packages at top level, so imports read
 # `DTO.inputs.chat`, `application.chat.service`, `infrastructure.llm.factory`
 # and never as a bare top-level module.
@@ -70,7 +74,7 @@ packages = [
 
 # `scripts` is a plain script directory and is deliberately NOT shipped.
 [tool.hatch.build.targets.sdist]
-include = ["src", "tests", "data", "scripts", "pyproject.toml", ".env.example", "README.md", "LICENSE"]
+include = ["src", "tests", "data", "scripts", "docs", "pyproject.toml", ".env.example", "README.md", "LICENSE"]
 exclude = [
     "**/__pycache__",
     "**/*.pyc",

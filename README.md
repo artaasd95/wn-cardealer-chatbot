@@ -1,132 +1,295 @@
 # wn-cardealer-chatbot
 
-A car-dealer chatbot: identify the car, retrieve the matching car/dealer data,
-then either show the dealer's details or schedule a call.
+`wn-cardealer-chatbot` is an installable Python package that implements the AI
+Engineer project brief: an LLM-powered car dealer assistant that helps a
+user find a car, retrieve the selling dealer, and either show dealer details or
+schedule a call.
 
-Built as a clean-architecture Python project — one layer per concern, contracts
-(DTO/models) at the boundaries, ports for every external effect, and adapters
-under `infrastructure/`. **No LLM framework is used**: no LangGraph, no
-LangChain. The workflow state machines are plain Python classes in
-`application/tasks/*/workflow.py`, and every LLM call goes through one port
-(`ports/llm.py`) whose provider is selected purely by `.env`.
+Repository: <https://github.com/artaasd95/wn-cardealer-chatbot>
 
----
+The project goes beyond the minimum CLI requirement and provides:
 
-## Requirements
+- an installable CLI chatbot (`cardealer`)
+- a FastAPI HTTP API
+- a Streamlit web UI
+- deterministic scenario suites for normal and edge-case conversations
 
-- Python **3.12+** (the pinned environment is `.venv`, Python 3.13.9)
-- No external services: the database defaults to SQLite and the session store
-  is in-memory
+## What the Project Does
 
-## Setup
+The assistant follows the project brief's core conversation flow:
+
+1. ask or infer which car the user wants,
+2. look it up in generated CSV-backed data,
+3. return the matching car and dealer,
+4. offer dealer details or call scheduling,
+5. either show the dealer's information or confirm a requested time slot.
+
+The LLM is used for intent extraction, entity extraction, and response wording.
+It does not control the workflow and it does not invent authoritative catalog
+results.
+
+## Documentation
+
+- [Architecture details](docs/architecture.md)
+- [Edge-case handling and executable scenario links](docs/edge-cases.md)
+- [Project response](docs/project-response.md)
+- [Scenario harness reference](tests/scenarios/README.md)
+
+## Package and Installation
+
+### Requirements
+
+- Python 3.12+
+- a configured OpenAI-compatible endpoint or local model server
+
+### Install
 
 ```bash
-# from the repository root
 python -m venv .venv
-source .venv/bin/activate          # Windows: .venv\Scripts\activate
 
-pip install -e ".[dev]"            # runtime + dev dependencies (pytest, ruff, mypy)
+# Windows
+.venv\Scripts\activate
 
-cp .env.example .env               # then edit the values (see below)
+# macOS / Linux
+# source .venv/bin/activate
+
+python -m pip install --upgrade pip
+python -m pip install -e ".[dev]"
 ```
 
-## Configuration (`.env`)
+The distribution name is `wn-cardealer-chatbot`.
 
-Every key has a working default in `.env.example`, so the file is
-copy-and-runnable. `config/settings.py` validates them **once at startup** and
-refuses to boot on a bad value (unknown provider, missing API key, malformed
-base URL).
-
-| Key | Meaning |
-| --- | --- |
-| `LLM_PROVIDER` | The only switch needed — currently `openai_compatible` |
-| `LLM_BASE_URL` | Any OpenAI-compatible `/v1` endpoint (OpenAI, Azure, Groq, Together, Ollama, vLLM, LM Studio) |
-| `LLM_API_KEY` | API key for that endpoint (placeholder in `.env.example`) |
-| `LLM_MODEL` | Model name served by the endpoint |
-| `LLM_TEMPERATURE` | `0.0` — extraction must be deterministic |
-| `LLM_TIMEOUT_SECONDS` | Per-request timeout |
-| `LLM_MAX_RETRIES` | Retry budget before the client degrades to its fallback |
-| `APP_ENV`, `APP_HOST`, `APP_PORT` | Runtime environment |
-| `DATABASE_URL` | Defaults to `sqlite:///./cardealer.db` |
-| `SESSION_TTL_SECONDS` | Conversational session lifetime |
-
-Swapping provider or endpoint is **configuration only** — no code change.
-
-## Data
-
-The catalog is generated deterministically from `scripts/generate_data.py`:
+After installation, the console entrypoint is available as:
 
 ```bash
-python scripts/generate_data.py            # write data/cars.csv, dealers.csv, aliases.csv
-python scripts/generate_data.py --check    # validate the CSVs without rewriting them
+cardealer
 ```
 
-The CSVs are loaded into the database automatically on first startup (only when
-the tables are empty). `data/aliases.csv` is loaded by the car repository so
-user-typed aliases (`B.M.W.`, `Merc`, `C Class`) resolve to canonical catalog
-values during search.
+## Configuration
 
-## Running the API
+Copy `.env.example` to `.env` and set the model connection details.
+
+```bash
+copy .env.example .env
+# macOS / Linux: cp .env.example .env
+```
+
+### Main settings
+
+| Key | Purpose |
+| --- | --- |
+| `LLM_PROVIDER` | Provider key, currently `openai_compatible` |
+| `LLM_BASE_URL` | OpenAI-compatible `/v1` endpoint |
+| `LLM_API_KEY` | Provider or local-server token |
+| `LLM_MODEL` | Model name served by the endpoint |
+| `LLM_TEMPERATURE` | Kept at `0.0` for deterministic extraction |
+| `LLM_TIMEOUT_SECONDS` | Per-request timeout |
+| `LLM_MAX_RETRIES` | Retry budget before fallback behavior |
+| `APP_ENV` | Environment label |
+| `APP_HOST`, `APP_PORT` | API host and port |
+| `APP_LOG_LEVEL` | Project-wide log level |
+| `APP_LOG_FILE` | Optional rotating log file path |
+| `DATABASE_URL` | SQLAlchemy connection string |
+| `SESSION_TTL_SECONDS` | In-memory conversation TTL |
+
+The application validates configuration centrally at startup and fails fast on
+bad provider settings.
+
+## Data Design
+
+The repository generates its own deterministic test data.
+
+### Data files
+
+- `data/cars.csv`
+- `data/dealers.csv`
+- `data/aliases.csv`
+
+### Current generated fixture sizes
+
+- 156 cars
+- 14 dealers
+- 33 aliases
+
+### Design choices
+
+- cars link to dealers via `dealer_id`
+- aliases are stored separately to support normalization before lookup
+- the generator includes normal rows and deliberately adversarial rows
+- the output is deterministic, so tests and scenario examples are repeatable
+
+### Generate or validate the fixtures
+
+```bash
+python scripts/generate_data.py
+python scripts/generate_data.py --check
+```
+
+The database loader imports these CSV files automatically when the schema is
+initialized and the tables are empty.
+
+## Running the Project
+
+### 1. CLI chatbot
+
+The CLI is the simplest way to use the assistant locally.
+
+```bash
+cardealer
+```
+
+Optional arguments:
+
+```bash
+cardealer --user-id demo-user
+cardealer --session-id existing-session-id
+```
+
+CLI commands:
+
+- `/help` prints quick usage
+- `/reset` clears the current session
+- `/quit` exits the program
+
+### 2. FastAPI API
 
 ```bash
 uvicorn presentation.api.main:app --reload
 ```
 
-- `POST /api/chat` — one chat turn (`{"session_id": ..., "message": ...}`)
-- `GET /api/health` — liveness + the resolved provider name (never the key)
-- `DELETE /api/sessions/{session_id}` — restart the conversation
-- Interactive docs: <http://localhost:8000/docs>
+Main endpoints:
 
-Example:
+- `POST /api/chat`
+- `GET /api/health`
+- `DELETE /api/sessions/{session_id}`
+
+Interactive API docs:
+
+- <http://localhost:8000/docs>
+
+Example request:
 
 ```bash
 curl -X POST http://localhost:8000/api/chat \
   -H "Content-Type: application/json" \
-  -d '{"message": "I am looking for a BMW"}'
+  -d '{"session_id": null, "message": "I want a BMW 3 Series 320i 2021"}'
 ```
 
-## Running the chat UI
+### 3. Streamlit UI
+
+Start the API first, then launch Streamlit:
 
 ```bash
 streamlit run src/presentation/streamlit/app.py
 ```
 
-The UI talks to the API only (`API_BASE_URL` from the environment, then
-`.streamlit/secrets.toml`, then `http://localhost:8000`). It renders the
-`suggested_actions` returned in the response DTO as clickable next steps.
+The UI talks to the API only. It reads `API_BASE_URL` from the environment,
+then from Streamlit secrets, then falls back to `http://localhost:8000`.
 
-## Tests, lint, types
+## Testing and Quality Checks
+
+Use the project interpreter for consistency.
 
 ```bash
-pytest                      # full suite
-pytest -m unit              # fast, isolated tests
-pytest -m integration       # database + HTTP layer
-pytest --cov=src --cov-report=term-missing
+python -m pytest
+python -m pytest -m unit
+python -m pytest -m integration
+python -m pytest --cov=src --cov-report=term-missing
 
-ruff check .                # lint (import ordering, architecture rules)
-ruff format --check .       # formatting
-mypy src                    # strict type checking
+ruff check .
+ruff format --check .
+mypy src
 ```
 
-## Architecture
+## Scenario Testing
 
+The repository includes executable scenario payloads for both normal and edge
+cases.
+
+### List the available scenarios
+
+```bash
+python scripts/run_scenarios.py --list
 ```
+
+### Dry-run the request payloads without sending them
+
+```bash
+python scripts/run_scenarios.py --dry-run
+```
+
+### Run all scenarios against a live API
+
+```bash
+python scripts/run_scenarios.py
+```
+
+### Run only edge-case scenarios
+
+```bash
+python scripts/run_scenarios.py --suite edge
+python scripts/run_scenarios.py --suite edge --tag schedule_call --verbose
+```
+
+### Run the same scenario files through pytest with a scripted fake LLM
+
+```bash
+python -m pytest tests/integration/api/test_scenarios.py -q
+```
+
+## Edge Cases
+
+Edge cases are handled explicitly across the application, not left to the LLM.
+
+- not found, multiple-match, partial-input, and alias cases are routed through
+  deterministic repository logic
+- dealer and scheduling guards stop illegal follow-up actions cleanly
+- ambiguous or invalid schedule inputs are clarified before persistence
+- provider, configuration, and data-layer failures degrade safely or fail fast
+
+The detailed coverage map, with direct links to every edge-case scenario JSON,
+is in [docs/edge-cases.md](docs/edge-cases.md).
+
+## Architecture Summary
+
+The codebase uses a clean architecture with explicit boundaries:
+
+```text
 src/
-├── DTO/            boundary contracts (what FastAPI accepts/returns)
-├── models/         internal contracts (LLM inputs, repository outputs)
-├── domain/         entities, enums, exceptions, parsing rules — no I/O
-├── application/    use cases, chat facade, task router, workflow state machines
-├── ports/          protocols: LLMPort, SessionStore, repositories
-├── infrastructure/ adapters: SQLAlchemy repos, in-memory session, LLM client + prompts
-├── presentation/   FastAPI routes/dependencies and the Streamlit UI
-└── config/         .env → typed settings, validated once at startup
+├── DTO/            transport contracts
+├── models/         internal data contracts
+├── domain/         business rules and validation
+├── application/    use cases, workflows, router, session logic
+├── ports/          abstract interfaces
+├── infrastructure/ concrete adapters and persistence
+├── presentation/   CLI, API, Streamlit
+└── config/         settings and logging
 ```
 
-Flow of one turn: `DTO/inputs/chat.py` → load session → intent extraction
-(`LLMPort`) → `TaskRouter` (state-guarded) → task use case → repository →
-workflow state advance (validated against `LEGAL_TRANSITIONS`) → save session →
-`DTO/outputs/chat.py`.
+One turn follows this pattern:
 
-The LLM never decides the workflow and never invents catalog data: it extracts
-entities and words replies, while SQL provides the authoritative car/dealer
-data and the session store owns the state machine.
+1. receive `ChatRequest`
+2. load or create the session
+3. classify task intent through `LLMPort`
+4. run the matching use case
+5. confirm results through repositories
+6. advance the workflow state legally
+7. save the session
+8. return `ChatResponse`
+
+See [docs/architecture.md](docs/architecture.md) for the full architecture.
+
+## Logging and Error Handling
+
+Logging is configured centrally in `config.logging` and shared across the CLI,
+API, Streamlit, repositories, and LLM adapter.
+
+- `APP_LOG_LEVEL` controls verbosity
+- `APP_LOG_FILE` optionally writes to a rotating file
+- LLM failures degrade to deterministic fallbacks
+- repository and session failures are logged with stable user-facing responses
+
+## How This Answers the Project Brief
+
+The direct, numbered response to the attached project brief is documented in
+[docs/project-response.md](docs/project-response.md).
