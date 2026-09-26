@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
+from application.chat.task_router import TaskRouter
 from domain.enums.task_type import TaskType
 from domain.enums.workflow_state import WorkflowState
 from models.inputs.task import TaskDecision
-from application.chat.task_router import TaskRouter
 
 
 class TestTaskRouter:

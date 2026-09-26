@@ -53,6 +53,15 @@ class InvalidScheduleError(DomainError):
 class ConfigError(DomainError):
     """Raised when configuration is invalid."""
 
-    def __init__(self, key: str, reason: str) -> None:
-        """Initialize with config key and reason."""
-        super().__init__(f"Config error for {key}: {reason}")
+    def __init__(self, key: str, reason: str | None = None) -> None:
+        """Initialize with a config key and an optional reason.
+
+        Args:
+            key: The configuration key at fault, or a complete message when
+                ``reason`` is omitted.
+            reason: Why the configuration was rejected.
+        """
+        if reason is None:
+            super().__init__(f"Config error: {key}")
+        else:
+            super().__init__(f"Config error for {key}: {reason}")

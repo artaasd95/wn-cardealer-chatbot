@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import UTC, datetime
 
 from sqlalchemy import Column, DateTime, String
-from infrastructure.database.tables.base import Base
 
+from infrastructure.database.tables.base import Base
 
 
 class SessionTable(Base):
@@ -22,8 +22,15 @@ class SessionTable(Base):
     conversation_history = Column(String, nullable=False, default="[]")
     scheduling_context = Column(String, nullable=True, default="{}")
     expires_at = Column(DateTime, nullable=False, index=True)
-    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
-    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = Column(
+        DateTime,
+        nullable=False,
+        default=lambda: datetime.now(UTC).replace(tzinfo=None),
+        onupdate=lambda: datetime.now(UTC).replace(tzinfo=None),
+    )
+    created_at = Column(
+        DateTime, nullable=False, default=lambda: datetime.now(UTC).replace(tzinfo=None)
+    )
 
     def __repr__(self) -> str:
         """Return a readable representation."""

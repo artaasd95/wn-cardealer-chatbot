@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import UTC, datetime
 
 from sqlalchemy import Column, DateTime, ForeignKey, String
-from infrastructure.database.tables.base import Base
 
+from infrastructure.database.tables.base import Base
 
 
 class Message(Base):
@@ -18,7 +18,9 @@ class Message(Base):
     session_id = Column(String, ForeignKey("session.session_id"), nullable=False, index=True)
     role = Column(String, nullable=False)
     content = Column(String, nullable=False)
-    created_at = Column(DateTime, nullable=False, default=datetime.utcnow, index=True)
+    created_at = Column(
+        DateTime, nullable=False, default=lambda: datetime.now(UTC).replace(tzinfo=None), index=True
+    )
 
     def __repr__(self) -> str:
         """Return a readable representation."""

@@ -18,15 +18,46 @@ logger = logging.getLogger(__name__)
 class TaskRouter:
     """Routes intent decisions to tasks, respecting workflow state."""
 
-    # Legal transitions: from which states can we enter each task?
+    # From which states may each task start?
+    #
+    # ITEM_LOOKUP is available from every conversational state except COMPLETE
+    # (the session must be restarted first).
+    # DEALER_DETAILS / SCHEDULE_CALL are refused from START, where nothing has
+    # happened yet, and allowed from the search states onward: there the task's
+    # own guard answers "pick a car first" when no selection exists, instead of
+    # letting the task skip the search that has not happened. Success paths
+    # walk the legal path (AWAITING_ACTION → …) via advance_through.
     TASK_ENTRY_STATES = {
         TaskType.ITEM_LOOKUP: {
             WorkflowState.START,
             WorkflowState.AWAITING_CAR,
+            WorkflowState.CAR_SELECTED,
             WorkflowState.CAR_NOT_FOUND,
+            WorkflowState.AWAITING_ACTION,
+            WorkflowState.DEALER_DETAILS_SHOWN,
+            WorkflowState.AWAITING_DATETIME,
+            WorkflowState.SCHEDULE_CONFIRMED,
         },
-        TaskType.DEALER_DETAILS: {WorkflowState.AWAITING_ACTION},
-        TaskType.SCHEDULE_CALL: {WorkflowState.AWAITING_ACTION},
+        TaskType.DEALER_DETAILS: {
+            WorkflowState.AWAITING_CAR,
+            WorkflowState.CAR_SELECTED,
+            WorkflowState.CAR_NOT_FOUND,
+            WorkflowState.AWAITING_ACTION,
+            WorkflowState.DEALER_DETAILS_SHOWN,
+            WorkflowState.AWAITING_DATETIME,
+            WorkflowState.SCHEDULE_CONFIRMED,
+            WorkflowState.COMPLETE,
+        },
+        TaskType.SCHEDULE_CALL: {
+            WorkflowState.AWAITING_CAR,
+            WorkflowState.CAR_SELECTED,
+            WorkflowState.CAR_NOT_FOUND,
+            WorkflowState.AWAITING_ACTION,
+            WorkflowState.DEALER_DETAILS_SHOWN,
+            WorkflowState.AWAITING_DATETIME,
+            WorkflowState.SCHEDULE_CONFIRMED,
+            WorkflowState.COMPLETE,
+        },
     }
 
     @staticmethod

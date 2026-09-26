@@ -49,6 +49,10 @@ class Database:
             base_metadata: SQLAlchemy declarative base metadata object.
         """
         try:
+            # Importing the package registers every table module
+            # (car, dealer, session, message, schedule) on the metadata.
+            import infrastructure.database.tables  # noqa: F401
+
             base_metadata.create_all(bind=self.engine)
             logger.info("Database tables created")
             self._load_csv_fixtures()

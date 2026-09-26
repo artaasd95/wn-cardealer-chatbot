@@ -10,14 +10,13 @@ import logging
 from application.tasks.item_lookup.workflow import ItemLookupWorkflow
 from domain.enums.workflow_state import WorkflowState
 from domain.exceptions import DealerNotFoundError
-from DTO.inputs.car import CarSearchRequest
 from infrastructure.llm.prompts.car_extraction import (
     build_car_extraction_prompt,
     normalize_make,
     normalize_model,
     normalize_variant,
 )
-from models.inputs.car import NormalizedCarQuery
+from models.inputs.car import CarExtraction, NormalizedCarQuery
 from models.outputs.car import CarSearchResult
 from models.outputs.dealer import DealerRecord
 from ports.llm import LLMPort
@@ -58,9 +57,9 @@ class LookupCarUseCase:
         Returns:
             Tuple of (search result, selected dealer or None, next workflow state).
         """
-        # Step 1: Extract car request via LLM
+        # Step 1: Extract car request via LLM (models/inputs contract, never a DTO)
         prompt = build_car_extraction_prompt(user_message)
-        extraction = self.llm.structured_completion(prompt, CarSearchRequest)
+        extraction = self.llm.structured_completion(prompt, CarExtraction)
 
         # Step 2: Normalize
         query = NormalizedCarQuery(
@@ -89,6 +88,6 @@ class LookupCarUseCase:
                 selected_dealer = None
 
         # Step 5: Determine next state
-        next_state = ItemLookupWorkflow.advance(result)
+        next_state = ItemLookupWorkflow.advance(result, dealer_found=selected_dealer is not None)
 
         return result, selected_dealer, next_state

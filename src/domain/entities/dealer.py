@@ -25,11 +25,7 @@ class Dealer:
             True if dealer_id, dealer_name, address, phone, and email are all present.
         """
         return bool(
-            self.dealer_id
-            and self.dealer_name
-            and self.address
-            and self.phone
-            and self.email
+            self.dealer_id and self.dealer_name and self.address and self.phone and self.email
         )
 
     def formatted_address(self) -> str:

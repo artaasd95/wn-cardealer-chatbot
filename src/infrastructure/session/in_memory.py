@@ -45,11 +45,13 @@ class InMemorySessionStore(SessionStore):
 
         return SessionSnapshotRecord(
             session_id=record.session_id,
+            user_id=record.user_id,
             workflow_state=record.workflow_state,
             selected_car_id=record.selected_car_id,
             selected_dealer_id=record.selected_dealer_id,
             conversation_history=record.conversation_history,
             scheduling_context=record.scheduling_context,
+            expires_at=record.expires_at,
         )
 
     def create(self, user_id: str | None = None, ttl_seconds: int = 3600) -> SessionRecord:

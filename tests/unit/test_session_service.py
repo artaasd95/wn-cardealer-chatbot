@@ -2,14 +2,11 @@
 
 from __future__ import annotations
 
-from datetime import datetime
-
 import pytest
 
 from application.session.service import SessionService
 from domain.enums.workflow_state import WorkflowState
 from domain.exceptions import DomainError
-from models.outputs.session import SessionRecord
 from ports.session_store import SessionStore
 
 
@@ -25,9 +22,7 @@ class TestSessionService:
         assert session.workflow_state == WorkflowState.START.value
         assert session.conversation_history == []
 
-    def test_get_or_create_existing_session(
-        self, session_store: SessionStore
-    ) -> None:
+    def test_get_or_create_existing_session(self, session_store: SessionStore) -> None:
         """Test retrieving an existing session."""
         service = SessionService(session_store)
 
@@ -52,9 +47,7 @@ class TestSessionService:
         retrieved = session_store.get(session.session_id)
         assert retrieved.workflow_state == WorkflowState.CAR_SELECTED.value
 
-    def test_require_selected_car_success(
-        self, session_store: SessionStore
-    ) -> None:
+    def test_require_selected_car_success(self, session_store: SessionStore) -> None:
         """Test that require_selected_car returns car ID when set."""
         service = SessionService(session_store)
         session = service.get_or_create(session_id=None)
@@ -63,9 +56,7 @@ class TestSessionService:
         car_id = service.require_selected_car(session)
         assert car_id == "car-123"
 
-    def test_require_selected_car_failure(
-        self, session_store: SessionStore
-    ) -> None:
+    def test_require_selected_car_failure(self, session_store: SessionStore) -> None:
         """Test that require_selected_car raises when not set."""
         service = SessionService(session_store)
         session = service.get_or_create(session_id=None)
@@ -73,9 +64,7 @@ class TestSessionService:
         with pytest.raises(DomainError, match="No car selected"):
             service.require_selected_car(session)
 
-    def test_require_selected_dealer_success(
-        self, session_store: SessionStore
-    ) -> None:
+    def test_require_selected_dealer_success(self, session_store: SessionStore) -> None:
         """Test that require_selected_dealer returns dealer ID when set."""
         service = SessionService(session_store)
         session = service.get_or_create(session_id=None)
@@ -84,9 +73,7 @@ class TestSessionService:
         dealer_id = service.require_selected_dealer(session)
         assert dealer_id == "dealer-123"
 
-    def test_require_selected_dealer_failure(
-        self, session_store: SessionStore
-    ) -> None:
+    def test_require_selected_dealer_failure(self, session_store: SessionStore) -> None:
         """Test that require_selected_dealer raises when not set."""
         service = SessionService(session_store)
         session = service.get_or_create(session_id=None)

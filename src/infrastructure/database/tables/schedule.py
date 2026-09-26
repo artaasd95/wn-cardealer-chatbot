@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import UTC, datetime
 
 from sqlalchemy import Column, DateTime, ForeignKey, String
-from infrastructure.database.tables.base import Base
 
+from infrastructure.database.tables.base import Base
 
 
 class Schedule(Base):
@@ -21,7 +21,9 @@ class Schedule(Base):
     scheduled_for = Column(DateTime, nullable=False)
     timezone = Column(String, nullable=True)
     status = Column(String, nullable=False, default="pending")
-    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    created_at = Column(
+        DateTime, nullable=False, default=lambda: datetime.now(UTC).replace(tzinfo=None)
+    )
 
     def __repr__(self) -> str:
         """Return a readable representation."""

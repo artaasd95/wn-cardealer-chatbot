@@ -1,6 +1,11 @@
 """Handle user message use case.
 
 Orchestrates a full chat turn: load session, select task, dispatch, save session.
+
+Each task handler returns the reply text, the next workflow state and — when
+the default "next tasks" suggestion does not fit — an explicit list of
+suggested actions (disambiguation candidates, for example). Models are mapped
+to DTOs here, at the application edge, before anything reaches the API.
 """
 
 from __future__ import annotations
@@ -18,14 +23,139 @@ from domain.enums.task_type import TaskType
 from domain.enums.workflow_state import WorkflowState
 from domain.exceptions import DomainError
 from DTO.inputs.chat import ChatRequest
-from DTO.outputs.chat import ChatResponse
+from DTO.outputs.car import CarCandidateList, CarSummary
+from DTO.outputs.chat import ChatResponse, ClarificationMessage
+from DTO.outputs.dealer import DealerDetails
+from infrastructure.llm.prompts.response import build_response_prompt
+from models.inputs.response import ResponseWording
+from models.outputs.car import CarRecord
+from models.outputs.dealer import DealerRecord
 from models.outputs.session import SessionRecord
 from ports.llm import LLMPort
 from ports.repositories.car_repository import CarRepository
 from ports.repositories.dealer_repository import DealerRepository
+from ports.repositories.schedule_repository import ScheduleRepository
 from ports.session_store import SessionStore
 
 logger = logging.getLogger(__name__)
+
+_FIND_A_CAR = "Find a car"
+_FIND_ANOTHER_CAR = "Find another car"
+_GET_DETAILS = "Get dealer details"
+_SCHEDULE_CALL = "Schedule a call"
+
+
+def suggest_next_tasks(state: WorkflowState) -> list[str]:
+    """Map the current workflow state to the actions the user can take next.
+
+    Args:
+        state: The workflow state the session is in after the turn.
+
+    Returns:
+        Human-readable next actions (empty when the bot just asked a question
+        the user should answer directly).
+    """
+    if state in {WorkflowState.START, WorkflowState.AWAITING_CAR, WorkflowState.CAR_NOT_FOUND}:
+        return [_FIND_A_CAR]
+    if state in {WorkflowState.AWAITING_ACTION, WorkflowState.CAR_SELECTED}:
+        return [_GET_DETAILS, _SCHEDULE_CALL, _FIND_ANOTHER_CAR]
+    if state is WorkflowState.DEALER_DETAILS_SHOWN:
+        return [_SCHEDULE_CALL, _FIND_ANOTHER_CAR]
+    if state in {WorkflowState.SCHEDULE_CONFIRMED, WorkflowState.COMPLETE}:
+        return [_FIND_ANOTHER_CAR, _GET_DETAILS]
+    return []
+
+
+def _price_range(car: CarRecord) -> str:
+    """Format a car's price band for the CarSummary DTO.
+
+    Args:
+        car: The car record returned by the repository.
+
+    Returns:
+        A printable price range, or a neutral placeholder when unpersisted.
+    """
+    low, high = car.price_min, car.price_max
+    if low is not None and high is not None:
+        return f"${low:,.0f} - ${high:,.0f}"
+    if low is not None:
+        return f"From ${low:,.0f}"
+    if high is not None:
+        return f"Up to ${high:,.0f}"
+    return "Ask the dealer"
+
+
+def _car_summary(car: CarRecord) -> CarSummary:
+    """Map a car record to the CarSummary DTO.
+
+    Args:
+        car: The car record returned by the repository.
+
+    Returns:
+        The CarSummary DTO.
+    """
+    return CarSummary(
+        car_id=car.car_id,
+        make=car.make,
+        model=car.model,
+        variant=car.variant,
+        year=car.year,
+        price_range=_price_range(car),
+    )
+
+
+def _candidate_label(car: CarSummary) -> str:
+    """Build the clickable label for a disambiguation candidate.
+
+    Args:
+        car: The candidate summary.
+
+    Returns:
+        A label the user can click to pick that car.
+    """
+    variant = f" {car.variant}" if car.variant else ""
+    return f"{car.make} {car.model}{variant} ({car.year})"
+
+
+def _dealer_details_dto(dealer: DealerRecord) -> DealerDetails:
+    """Map a dealer record to the DealerDetails DTO.
+
+    Args:
+        dealer: The dealer record returned by the repository.
+
+    Returns:
+        The DealerDetails DTO.
+    """
+    return DealerDetails(
+        dealer_id=dealer.dealer_id,
+        name=dealer.dealer_name,
+        city=dealer.city,
+        address=dealer.address,
+        phone=dealer.phone,
+        email=dealer.email,
+        rating=dealer.rating,
+        cars=[],
+    )
+
+
+def _dealer_details_text(details: DealerDetails) -> str:
+    """Deterministic dealer-details wording, used when the LLM is unavailable.
+
+    Args:
+        details: The dealer details DTO.
+
+    Returns:
+        A readable, line-broken summary of the dealer.
+    """
+    lines = [
+        f"{details.name} ({details.city})",
+        details.address,
+        f"Phone: {details.phone}",
+        f"Email: {details.email}",
+    ]
+    if details.rating is not None:
+        lines.append(f"Rating: {details.rating}/5")
+    return "\n".join(lines)
 
 
 class HandleUserMessageUseCase:
@@ -37,6 +167,7 @@ class HandleUserMessageUseCase:
         llm: LLMPort,
         car_repo: CarRepository,
         dealer_repo: DealerRepository,
+        schedule_repo: ScheduleRepository | None = None,
     ) -> None:
         """Initialize with all dependencies.
 
@@ -45,14 +176,16 @@ class HandleUserMessageUseCase:
             llm: LLMPort for LLM calls.
             car_repo: CarRepository for car search.
             dealer_repo: DealerRepository for dealer lookup.
+            schedule_repo: ScheduleRepository for persisting created schedules.
         """
+        self.llm = llm
         self.session_service = SessionService(session_store)
         self.load_session = LoadSessionUseCase(session_store)
         self.save_session = SaveSessionUseCase(session_store)
         self.select_task = SelectTaskUseCase(llm)
         self.lookup_car = LookupCarUseCase(llm, car_repo, dealer_repo)
         self.get_dealer_details = GetDealerDetailsUseCase(dealer_repo)
-        self.schedule_call = ScheduleCallUseCase(llm)
+        self.schedule_call = ScheduleCallUseCase(llm, schedule_repo)
 
     def execute(self, request: ChatRequest) -> ChatResponse:
         """Handle a user message and return a response.
@@ -77,32 +210,41 @@ class HandleUserMessageUseCase:
             # Step 4: Dispatch to task
             reply = "I'm not sure how to help with that."
             next_state = current_state
+            suggestions: list[str] | None = None
 
             if task_type == TaskType.ITEM_LOOKUP:
-                reply, next_state, session = self._handle_item_lookup(request.message, session)
+                reply, next_state, session, suggestions = self._handle_item_lookup(
+                    request.message, session
+                )
 
             elif task_type == TaskType.DEALER_DETAILS:
                 reply, next_state = self._handle_dealer_details(session)
 
             elif task_type == TaskType.SCHEDULE_CALL:
-                reply, next_state = self._handle_schedule_call(request.message, session)
+                reply, next_state, session = self._handle_schedule_call(request.message, session)
 
             else:
-                reply = "I didn't understand that. Please try asking me to find a car, show dealer details, or schedule a call."
+                reply = (
+                    "I didn't understand that. Please try asking me to find a car, "
+                    "show dealer details, or schedule a call."
+                )
 
-            # Step 5: Update session
-            session = self.session_service.advance_workflow(session, next_state)
+            # Step 5: Update session — walk the legal path to the target state
+            session = self.session_service.advance_through(session, next_state)
             session = self.session_service.append_message(session, "assistant", reply)
 
             # Step 6: Persist
             self.session_service.persist(session)
 
-            # Step 7: Build response
+            # Step 7: Build response (models/DTO already mapped by the handlers)
+            state = WorkflowState(session.workflow_state)
             return ChatResponse(
                 session_id=session.session_id,
                 reply=reply,
                 workflow_state=session.workflow_state,
-                suggested_actions=[],
+                suggested_actions=(
+                    suggestions if suggestions is not None else suggest_next_tasks(state)
+                ),
                 requires_input=True,
             )
 
@@ -128,7 +270,7 @@ class HandleUserMessageUseCase:
 
     def _handle_item_lookup(
         self, user_message: str, session: SessionRecord
-    ) -> tuple[str, WorkflowState, SessionRecord]:
+    ) -> tuple[str, WorkflowState, SessionRecord, list[str] | None]:
         """Handle car lookup task.
 
         Args:
@@ -136,7 +278,8 @@ class HandleUserMessageUseCase:
             session: Current session record.
 
         Returns:
-            Tuple of (reply, next state, updated session).
+            Tuple of (reply, next state, updated session, explicit suggestions
+            or None to use the state default).
         """
         try:
             result, dealer, next_state = self.lookup_car.execute(user_message)
@@ -146,21 +289,47 @@ class HandleUserMessageUseCase:
                 session = self.session_service.set_selected_car(session, car.car_id)
                 if dealer:
                     session = self.session_service.set_selected_dealer(session, dealer.dealer_id)
-                reply = f"Found {car.make} {car.model}. Would you like dealer details or to schedule a call?"
 
-            elif result.status == "multiple":
-                reply = "I found multiple cars. Which one interests you? " + ", ".join(
-                    [f"{c.make} {c.model}" for c in result.candidates]
+                summary = _car_summary(car)
+                variant = f" {summary.variant}" if summary.variant else ""
+                reply = (
+                    f"Found {summary.make} {summary.model}{variant} ({summary.year}) — "
+                    f"{summary.price_range}."
                 )
+                if dealer:
+                    reply += f" {dealer.dealer_name} in {dealer.city} can help you with it."
+                reply += " Would you like dealer details or to schedule a call?"
+                return reply, next_state, session, None
 
-            else:
-                reply = "I couldn't find a car matching that description. Can you try a different search?"
+            if result.status == "multiple":
+                # Disambiguation branch: DTO candidates become clickable options.
+                candidates = [_car_summary(c) for c in (result.candidates or result.cars)]
+                options = CarCandidateList(
+                    candidates=candidates,
+                    message="Which of these did you mean?",
+                )
+                labels = [_candidate_label(c) for c in options.candidates]
+                reply = (
+                    "I found several matches. "
+                    + options.message
+                    + " Pick one: "
+                    + "; ".join(labels)
+                )
+                return reply, next_state, session, labels
 
-            return reply, next_state, session
+            # not_found branch: fallback message, not an exception
+            clarification = ClarificationMessage(
+                reply=(
+                    "I couldn't find a car matching that description. "
+                    "Could you try a different make, model or year?"
+                ),
+                missing_fields=["make", "model"],
+            )
+            return clarification.reply, next_state, session, None
 
         except Exception as e:
             logger.error(f"Item lookup failed: {str(e)}")
-            return f"Car search failed: {str(e)}", WorkflowState.AWAITING_CAR, session
+            return f"Car search failed: {str(e)}", WorkflowState.AWAITING_CAR, session, None
 
     def _handle_dealer_details(self, session: SessionRecord) -> tuple[str, WorkflowState]:
         """Handle dealer details task.
@@ -175,29 +344,46 @@ class HandleUserMessageUseCase:
             dealer_id = self.session_service.require_selected_dealer(session)
             dealer, next_state = self.get_dealer_details.execute(dealer_id)
 
-            if dealer:
-                reply = (
-                    f"Dealer: {dealer.dealer_name}\n"
-                    f"City: {dealer.city}\n"
-                    f"Phone: {dealer.phone}\n"
-                    f"Email: {dealer.email}\n"
-                    f"Rating: {dealer.rating}"
-                )
-            else:
-                reply = "Could not retrieve dealer details."
+            if not dealer:
+                return "Could not retrieve dealer details.", next_state
 
-            return reply, next_state
+            details = _dealer_details_dto(dealer)
+            return self._word_dealer_details(details), next_state
 
         except DomainError as e:
-            return str(e), WorkflowState.AWAITING_ACTION
+            # No dealer selected (or details unavailable): stay put and ask the
+            # user to pick a car first.
+            return str(e), WorkflowState(session.workflow_state)
 
         except Exception as e:
             logger.error(f"Dealer details failed: {str(e)}")
             return f"Failed to get dealer details: {str(e)}", WorkflowState.AWAITING_ACTION
 
+    def _word_dealer_details(self, details: DealerDetails) -> str:
+        """Word a dealer-details reply through the LLM.
+
+        Args:
+            details: The DealerDetails DTO built from the record.
+
+        Returns:
+            LLM wording, or deterministic text built from the same DTO when the
+            provider fails or returns nothing.
+        """
+        data_summary = (
+            f"name: {details.name}; city: {details.city}; address: {details.address}; "
+            f"phone: {details.phone}; email: {details.email}; "
+            f"rating: {details.rating if details.rating is not None else 'not rated'}"
+        )
+        prompt = build_response_prompt(
+            task_summary="The user asked for the dealer's contact details.",
+            data_summary=data_summary,
+        )
+        worded = self.llm.structured_completion(prompt, ResponseWording).reply.strip()
+        return worded or _dealer_details_text(details)
+
     def _handle_schedule_call(
         self, user_message: str, session: SessionRecord
-    ) -> tuple[str, WorkflowState]:
+    ) -> tuple[str, WorkflowState, SessionRecord]:
         """Handle schedule call task.
 
         Args:
@@ -205,29 +391,47 @@ class HandleUserMessageUseCase:
             session: Current session record.
 
         Returns:
-            Tuple of (reply, next state).
+            Tuple of (reply, next state, updated session).
         """
         try:
             dealer_id = self.session_service.require_selected_dealer(session)
             car_id = self.session_service.require_selected_car(session)
 
-            schedule, next_state = self.schedule_call.execute(
-                user_message, dealer_id, car_id, session.session_id
+            outcome, next_state = self.schedule_call.execute(
+                user_message,
+                dealer_id,
+                car_id,
+                session.session_id,
+                session.scheduling_context,
             )
 
-            if schedule:
-                reply = (
-                    f"Call scheduled for {schedule.scheduled_for} "
-                    f"({schedule.timezone}). We'll be in touch!"
-                )
-            else:
-                reply = "Could not schedule the call. Please try again."
+            # Carry partial date/time across turns; cleared once created.
+            session = self.session_service.set_scheduling_context(session, dict(outcome.context))
 
-            return reply, next_state
+            if outcome.status == "created" and outcome.record is not None:
+                logger.info(
+                    "schedule %s created for session %s",
+                    outcome.record.schedule_id,
+                    session.session_id,
+                )
+                return outcome.reply, next_state, session
+
+            # Everything else is a question: missing, ambiguous, unreadable,
+            # past, or a persistence failure.
+            question = ClarificationMessage(
+                reply=outcome.question,
+                missing_fields=outcome.missing_fields,
+            )
+            return question.reply, next_state, session
 
         except DomainError as e:
-            return str(e), WorkflowState.AWAITING_ACTION
+            # No dealer/car selected: stay put and ask the user to pick a car.
+            return str(e), WorkflowState(session.workflow_state), session
 
         except Exception as e:
             logger.error(f"Schedule call failed: {str(e)}")
-            return f"Failed to schedule call: {str(e)}", WorkflowState.AWAITING_DATETIME
+            return (
+                f"Failed to schedule call: {str(e)}",
+                WorkflowState.AWAITING_DATETIME,
+                session,
+            )

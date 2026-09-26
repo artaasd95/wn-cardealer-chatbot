@@ -6,30 +6,47 @@ Coordinates session operations: creation, retrieval, persistence, and state mana
 from __future__ import annotations
 
 import logging
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from uuid import uuid4
 
-from domain.enums.workflow_state import WorkflowState
-from domain.exceptions import DomainError
-from models.outputs.session import MessageRecord, SessionRecord
+from application.use_cases.load_session import LoadSessionUseCase
+from application.use_cases.save_session import SaveSessionUseCase
+from domain.enums.workflow_state import (
+    WorkflowState,
+    ensure_legal_transition,
+    shortest_legal_path,
+)
+from domain.exceptions import DomainError, InvalidTransitionError
+from DTO.inputs.session import SessionRequest
+from models.outputs.message import MessageRecord
+from models.outputs.session import SessionRecord
 from ports.session_store import SessionStore
 
 logger = logging.getLogger(__name__)
+
+# Fallback TTL for stores that return a snapshot without an expiry; matches the
+# default of SessionStore.create().
+_DEFAULT_TTL_SECONDS = 3600
 
 
 class SessionService:
     """Facade for session management."""
 
     def __init__(self, session_store: SessionStore) -> None:
-        """Initialize with session store dependency.
+        """Initialize the facade over the session use cases.
 
         Args:
             session_store: SessionStore port for persistence.
         """
         self.session_store = session_store
+        self.load_session = LoadSessionUseCase(session_store)
+        self.save_session = SaveSessionUseCase(session_store)
 
     def get_or_create(self, session_id: str | None, user_id: str | None = None) -> SessionRecord:
         """Get an existing session or create a new one.
+
+        Delegates loading/creating to LoadSessionUseCase, then rebuilds the
+        mutable record the turn needs.
 
         Args:
             session_id: Optional session ID to load.
@@ -38,33 +55,35 @@ class SessionService:
         Returns:
             A SessionRecord (loaded or newly created).
         """
-        if session_id:
-            snapshot = self.session_store.get(session_id)
-            if snapshot:
-                # Reconstruct full SessionRecord from snapshot
-                return SessionRecord(
-                    session_id=snapshot.session_id,
-                    user_id=None,  # Not stored in snapshot
-                    workflow_state=snapshot.workflow_state,
-                    selected_car_id=snapshot.selected_car_id,
-                    selected_dealer_id=snapshot.selected_dealer_id,
-                    conversation_history=snapshot.conversation_history,
-                    expires_at=datetime.now(UTC),  # Placeholder
-                    created_at=datetime.now(UTC),  # Placeholder
-                    updated_at=datetime.now(UTC),
-                )
-
-        # Create new
-        record = self.session_store.create(user_id=user_id)
-        return record
+        snapshot = self.load_session.execute(
+            SessionRequest(session_id=session_id or "", user_id=user_id)
+        )
+        # Rebuild the mutable record the turn works on. The TTL and the
+        # scheduling context must survive the round trip, otherwise the session
+        # would expire one turn later and partially collected date/time would
+        # be lost. This covers both branches of the load use case: a session it
+        # found, and one it just created.
+        return SessionRecord(
+            session_id=snapshot.session_id,
+            user_id=snapshot.user_id,
+            workflow_state=snapshot.workflow_state,
+            selected_car_id=snapshot.selected_car_id,
+            selected_dealer_id=snapshot.selected_dealer_id,
+            conversation_history=snapshot.conversation_history,
+            scheduling_context=snapshot.scheduling_context,
+            expires_at=snapshot.expires_at
+            or (datetime.now(UTC) + timedelta(seconds=_DEFAULT_TTL_SECONDS)),
+        )
 
     def persist(self, record: SessionRecord) -> None:
         """Persist a session record.
 
+        Delegates to SaveSessionUseCase.
+
         Args:
             record: The SessionRecord to save.
         """
-        self.session_store.save(record)
+        self.save_session.execute(record)
 
     def require_selected_car(self, record: SessionRecord) -> str:
         """Guard: ensure a car is selected.
@@ -157,15 +176,59 @@ class SessionService:
     def advance_workflow(self, record: SessionRecord, new_state: WorkflowState) -> SessionRecord:
         """Advance the workflow to a new state.
 
+        Validates the move against the domain state machine, so application
+        code can only step along a legal edge and can only reach COMPLETE once
+        a car and a dealer have been confirmed by a repository call.
+
         Args:
             record: The current session record.
             new_state: The target workflow state.
 
         Returns:
             Updated SessionRecord with the new state.
+
+        Raises:
+            InvalidTransitionError: If the transition is not legal.
         """
+        ensure_legal_transition(
+            WorkflowState(record.workflow_state),
+            new_state,
+            selected_car_id=record.selected_car_id,
+            selected_dealer_id=record.selected_dealer_id,
+        )
         record.workflow_state = new_state.value
         record.updated_at = datetime.now(UTC)
+        return record
+
+    def advance_through(self, record: SessionRecord, target: WorkflowState) -> SessionRecord:
+        """Advance to a target state along the shortest chain of legal edges.
+
+        A single turn can legitimately pass through intermediate states
+        (CAR_SELECTED → AWAITING_ACTION, AWAITING_ACTION → …) exactly as the
+        plan's state diagram shows; every edge on the path is validated, and
+        the COMPLETE gate still applies at the moment it is crossed.
+
+        Args:
+            record: The current session record.
+            target: The state to reach.
+
+        Returns:
+            Updated SessionRecord in the target state.
+
+        Raises:
+            InvalidTransitionError: If no legal path exists (or the COMPLETE
+                gate rejects the final step).
+        """
+        current = WorkflowState(record.workflow_state)
+        path = shortest_legal_path(current, target)
+        if path is None:
+            raise InvalidTransitionError(
+                from_state=current.value,
+                to_state=target.value,
+                reason="no legal path in state machine",
+            )
+        for step in path[1:]:
+            record = self.advance_workflow(record, step)
         return record
 
     def set_selected_car(self, record: SessionRecord, car_id: str) -> SessionRecord:
@@ -209,5 +272,3 @@ class SessionService:
         record.scheduling_context = context
         record.updated_at = datetime.now(UTC)
         return record
-
-

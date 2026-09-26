@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 from sqlalchemy import Column, String
-from infrastructure.database.tables.base import Base
 
+from infrastructure.database.tables.base import Base
 
 
 class Dealer(Base):

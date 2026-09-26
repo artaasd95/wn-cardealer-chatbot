@@ -6,6 +6,7 @@ Interactive UI for the car dealer chatbot.
 from __future__ import annotations
 
 import logging
+import os
 import uuid
 
 import requests
@@ -21,8 +22,29 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# API base URL (configurable via environment)
-API_BASE_URL = st.secrets.get("API_BASE_URL", "http://localhost:8000")
+# API base URL: secrets.toml if present, then the environment, then localhost.
+DEFAULT_API_BASE_URL = "http://localhost:8000"
+
+
+def resolve_api_base_url() -> str:
+    """Resolve the API base URL without ever crashing on a missing secrets file.
+
+    Returns:
+        The API base URL to call.
+    """
+    env_url = os.environ.get("API_BASE_URL", "").strip()
+    if env_url:
+        return env_url
+    try:
+        secret_url = str(st.secrets.get("API_BASE_URL", "") or "").strip()
+        if secret_url:
+            return secret_url
+    except Exception as exc:  # no .streamlit/secrets.toml exists at all
+        logger.debug("streamlit secrets unavailable: %s", exc)
+    return DEFAULT_API_BASE_URL
+
+
+API_BASE_URL = resolve_api_base_url()
 
 
 def init_session_state() -> None:
@@ -35,6 +57,8 @@ def init_session_state() -> None:
         st.session_state.workflow_state = "START"
     if "api_connected" not in st.session_state:
         st.session_state.api_connected = False
+    if "suggested_actions" not in st.session_state:
+        st.session_state.suggested_actions = []
 
 
 def check_api_health() -> bool:
@@ -51,14 +75,15 @@ def check_api_health() -> bool:
         return False
 
 
-def send_message(user_input: str) -> tuple[str, str]:
+def send_message(user_input: str) -> tuple[str, str, list[str]]:
     """Send a message to the chat API.
 
     Args:
         user_input: The user's message.
 
     Returns:
-        Tuple of (reply, workflow_state) or ("Error message", "ERROR") on failure.
+        Tuple of (reply, workflow_state, suggested_actions); on failure the
+        actions list is empty.
     """
     try:
         response = requests.post(
@@ -73,18 +98,19 @@ def send_message(user_input: str) -> tuple[str, str]:
 
         if response.status_code == 200:
             data = response.json()
-            return data["reply"], data["workflow_state"]
-        else:
-            error_detail = response.json().get("detail", "Unknown error")
-            return f"Error: {error_detail}", "ERROR"
+            actions = data.get("suggested_actions") or []
+            return data["reply"], data["workflow_state"], list(actions)
+
+        error_detail = response.json().get("detail", "Unknown error")
+        return f"Error: {error_detail}", "ERROR", []
 
     except requests.exceptions.ConnectionError:
-        return "Unable to connect to API. Is the server running?", "ERROR"
+        return "Unable to connect to API. Is the server running?", "ERROR", []
     except requests.exceptions.Timeout:
-        return "API request timed out. Please try again.", "ERROR"
+        return "API request timed out. Please try again.", "ERROR", []
     except Exception as e:
         logger.error(f"Failed to send message: {str(e)}")
-        return f"Error: {str(e)}", "ERROR"
+        return f"Error: {str(e)}", "ERROR", []
 
 
 def reset_session() -> None:
@@ -94,6 +120,7 @@ def reset_session() -> None:
         st.session_state.session_id = str(uuid.uuid4())
         st.session_state.messages = []
         st.session_state.workflow_state = "START"
+        st.session_state.suggested_actions = []
         st.success("Session reset. Starting fresh!")
     except Exception as e:
         st.error(f"Failed to reset session: {str(e)}")
@@ -154,21 +181,36 @@ def main() -> None:
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
 
+    # Quick replies: clarification options and next-task suggestions that came
+    # back in the response DTO (suggested_actions).
+    pending: str | None = None
+    actions = st.session_state.suggested_actions or []
+    if actions:
+        st.markdown("#### Suggested next steps")
+        per_row = 3
+        for start in range(0, len(actions), per_row):
+            cols = st.columns(per_row)
+            for offset, action in enumerate(actions[start : start + per_row]):
+                if cols[offset].button(action, key=f"sugg_{start + offset}_{action}"):
+                    pending = action
+
     # Input area
     st.markdown("---")
     user_input = st.chat_input("Type your message here...")
-
     if user_input:
+        pending = user_input
+
+    if pending:
         # Display user message
         with st.chat_message("user"):
-            st.markdown(user_input)
+            st.markdown(pending)
 
         # Add to history
-        st.session_state.messages.append({"role": "user", "content": user_input})
+        st.session_state.messages.append({"role": "user", "content": pending})
 
         # Get response
         with st.spinner("Thinking..."):
-            reply, new_state = send_message(user_input)
+            reply, new_state, suggestions = send_message(pending)
 
         # Display assistant response
         with st.chat_message("assistant"):
@@ -177,8 +219,9 @@ def main() -> None:
         # Add to history
         st.session_state.messages.append({"role": "assistant", "content": reply})
 
-        # Update state
+        # Update state and the next-step suggestions from the DTO
         st.session_state.workflow_state = new_state
+        st.session_state.suggested_actions = suggestions
 
         # Rerun to refresh UI
         st.rerun()

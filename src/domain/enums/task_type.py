@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-from enum import Enum
+from enum import StrEnum
 
 """Task type enumeration for workflow routing."""
 
 
-class TaskType(str, Enum):
+class TaskType(StrEnum):
     """Enumeration of recognized user intents."""
 
     ITEM_LOOKUP = "ITEM_LOOKUP"

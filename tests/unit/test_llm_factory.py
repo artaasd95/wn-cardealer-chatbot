@@ -5,7 +5,6 @@ from __future__ import annotations
 import pytest
 
 from config.settings import LLMSettings
-from domain.exceptions import ConfigError
 from infrastructure.llm.factory import LLMClientFactory
 from ports.llm import LLMPort
 

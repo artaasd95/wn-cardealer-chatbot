@@ -4,8 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from config.settings import LLMSettings, AppSettings, DatabaseSettings, SessionSettings, Settings
-from domain.exceptions import ConfigError
+from config.settings import LLMSettings, Settings
 
 
 class TestLLMSettings:

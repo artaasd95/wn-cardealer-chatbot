@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import pytest
-
 from models.inputs.car import NormalizedCarQuery
 from ports.repositories.car_repository import CarRepository
 from ports.repositories.dealer_repository import DealerRepository
@@ -68,9 +66,7 @@ class TestCarRepository:
             assert car is not None
             assert car.car_id == car_id
 
-    def test_get_nonexistent_car_returns_none(
-        self, car_repo: CarRepository
-    ) -> None:
+    def test_get_nonexistent_car_returns_none(self, car_repo: CarRepository) -> None:
         """Test that getting nonexistent car returns None."""
         car = car_repo.get_by_id("nonexistent-id")
         assert car is None
@@ -97,9 +93,7 @@ class TestDealerRepository:
             assert dealer.dealer_name is not None
             assert dealer.city is not None
 
-    def test_get_nonexistent_dealer_returns_none(
-        self, dealer_repo: DealerRepository
-    ) -> None:
+    def test_get_nonexistent_dealer_returns_none(self, dealer_repo: DealerRepository) -> None:
         """Test that getting nonexistent dealer returns None."""
         dealer = dealer_repo.get_by_id("nonexistent-id")
         assert dealer is None

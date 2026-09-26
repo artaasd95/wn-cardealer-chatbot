@@ -1,27 +1,16 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import UTC, datetime
 
 from pydantic import BaseModel, Field
 
+from models.outputs.message import MessageRecord
+
 """Internal models for session persistence and retrieval."""
 
-
-class MessageRecord(BaseModel):
-    """Single message in conversation history."""
-
-    role: str = Field(
-        ...,
-        description="Role: user or assistant.",
-    )
-    content: str = Field(
-        ...,
-        description="Message content.",
-    )
-    created_at: datetime = Field(
-        default_factory=datetime.utcnow,
-        description="When the message was created.",
-    )
+# MessageRecord lives in models/outputs/message.py (one contract per file);
+# it is re-exported here because session history is typed as list[MessageRecord].
+__all__ = ["MessageRecord", "SessionRecord", "SessionSnapshotRecord"]
 
 
 class SessionRecord(BaseModel):
@@ -56,11 +45,11 @@ class SessionRecord(BaseModel):
         description="Scheduling context for call scheduling.",
     )
     created_at: datetime = Field(
-        default_factory=datetime.utcnow,
+        default_factory=lambda: datetime.now(UTC).replace(tzinfo=None),
         description="When session was created.",
     )
     updated_at: datetime = Field(
-        default_factory=datetime.utcnow,
+        default_factory=lambda: datetime.now(UTC).replace(tzinfo=None),
         description="When session was last updated.",
     )
     expires_at: datetime | None = Field(

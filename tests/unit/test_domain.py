@@ -1,13 +1,14 @@
 from __future__ import annotations
 
-import pytest
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 
+import pytest
+
+from domain.entities import Car, Dealer, Message, Schedule, Session
 from domain.enums import TaskType, WorkflowState
-from domain.entities import Car, Dealer, Schedule, Message, Session
 from domain.exceptions import (
-    InvalidTransitionError,
     InvalidScheduleError,
+    InvalidTransitionError,
 )
 from models.inputs.car import CarExtraction, NormalizedCarQuery
 
@@ -240,7 +241,7 @@ class TestScheduleValidation:
 
     def test_valid_future_schedule(self):
         """Test a valid future schedule passes validation."""
-        future_time = datetime.utcnow() + timedelta(days=1)
+        future_time = datetime.now(UTC).replace(tzinfo=None) + timedelta(days=1)
         schedule = Schedule(
             schedule_id="sched_123",
             dealer_id="D-001",
@@ -252,7 +253,7 @@ class TestScheduleValidation:
 
     def test_past_date_rejected(self):
         """Test that past dates are rejected."""
-        past_time = datetime.utcnow() - timedelta(days=1)
+        past_time = datetime.now(UTC).replace(tzinfo=None) - timedelta(days=1)
         schedule = Schedule(
             schedule_id="sched_123",
             dealer_id="D-001",
@@ -265,7 +266,7 @@ class TestScheduleValidation:
 
     def test_empty_timezone_rejected(self):
         """Test that empty timezone is rejected."""
-        future_time = datetime.utcnow() + timedelta(days=1)
+        future_time = datetime.now(UTC).replace(tzinfo=None) + timedelta(days=1)
         schedule = Schedule(
             schedule_id="sched_123",
             dealer_id="D-001",
@@ -278,7 +279,7 @@ class TestScheduleValidation:
 
     def test_invalid_status_rejected(self):
         """Test that invalid status is rejected."""
-        future_time = datetime.utcnow() + timedelta(days=1)
+        future_time = datetime.now(UTC).replace(tzinfo=None) + timedelta(days=1)
         schedule = Schedule(
             schedule_id="sched_123",
             dealer_id="D-001",
@@ -292,7 +293,7 @@ class TestScheduleValidation:
 
     def test_is_future(self):
         """Test is_future() method."""
-        future_time = datetime.utcnow() + timedelta(days=1)
+        future_time = datetime.now(UTC).replace(tzinfo=None) + timedelta(days=1)
         schedule = Schedule(
             schedule_id="sched_123",
             dealer_id="D-001",
@@ -304,7 +305,7 @@ class TestScheduleValidation:
 
     def test_time_until_scheduled(self):
         """Test time_until_scheduled() returns positive seconds."""
-        future_time = datetime.utcnow() + timedelta(hours=2)
+        future_time = datetime.now(UTC).replace(tzinfo=None) + timedelta(hours=2)
         schedule = Schedule(
             schedule_id="sched_123",
             dealer_id="D-001",
@@ -448,7 +449,7 @@ class TestSessionStateMachine:
             session_id="sess_123",
             user_id="user_456",
             workflow_state=WorkflowState.START,
-            expires_at=datetime.utcnow() - timedelta(hours=1),
+            expires_at=datetime.now(UTC).replace(tzinfo=None) - timedelta(hours=1),
         )
         assert session.is_expired()
 

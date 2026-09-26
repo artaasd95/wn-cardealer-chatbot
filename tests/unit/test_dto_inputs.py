@@ -3,11 +3,11 @@ from __future__ import annotations
 import pytest
 from pydantic import ValidationError
 
-from DTO.inputs.chat import ChatRequest
 from DTO.inputs.car import CarSearchRequest
+from DTO.inputs.chat import ChatRequest
 from DTO.inputs.dealer import DealerDetailsRequest
 from DTO.inputs.schedule import ScheduleCallRequest
-from DTO.inputs.session import SessionRequest, CreateSessionRequest
+from DTO.inputs.session import CreateSessionRequest, SessionRequest
 
 
 class TestChatRequest:

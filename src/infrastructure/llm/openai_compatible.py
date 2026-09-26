@@ -60,6 +60,25 @@ class OpenAICompatibleClient(LLMPort[T]):
         except Exception as e:
             raise ConfigError(f"Failed to initialize OpenAI client: {str(e)}") from e
 
+    @staticmethod
+    def _fallback(output_type: type[T]) -> T:
+        """Build a deterministic fallback instance of the requested schema.
+
+        A provider failure must never raise into a request handler, so this
+        never lets construction errors escape either: if a required field has
+        no default, the instance is built without validation.
+
+        Args:
+            output_type: The pydantic model class requested by the caller.
+
+        Returns:
+            A default instance of output_type.
+        """
+        try:
+            return output_type()
+        except Exception:
+            return output_type.model_construct()
+
     def structured_completion(self, prompt: str, output_type: type[T]) -> T:
         """Execute a structured completion.
 
@@ -104,22 +123,22 @@ class OpenAICompatibleClient(LLMPort[T]):
                     f"LLM response failed validation against schema {output_type.__name__}: {str(e)}. "
                     "Returning fallback."
                 )
-                return output_type()
+                return self._fallback(output_type)
 
         except APITimeoutError:
             logger.warning(
                 f"LLM request timed out after {self.settings.timeout_seconds}s. Returning fallback."
             )
-            return output_type()
+            return self._fallback(output_type)
 
         except APIConnectionError as e:
             logger.warning(f"LLM connection failed: {str(e)}. Returning fallback.")
-            return output_type()
+            return self._fallback(output_type)
 
         except APIStatusError as e:
             logger.warning(f"LLM provider error ({e.status_code}): {str(e)}. Returning fallback.")
-            return output_type()
+            return self._fallback(output_type)
 
         except Exception as e:
             logger.error(f"Unexpected error in LLM completion: {str(e)}. Returning fallback.")
-            return output_type()
+            return self._fallback(output_type)

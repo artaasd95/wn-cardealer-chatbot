@@ -25,10 +25,13 @@ class LoadSessionUseCase:
         """Load a session or create a new one.
 
         Args:
-            request: SessionRequest with session_id (optional) and user_id (optional).
+            request: SessionRequest with session_id (may be empty on a first
+                turn) and an optional user_id.
 
         Returns:
-            SessionSnapshotRecord containing the loaded or newly created session.
+            SessionSnapshotRecord containing the loaded or newly created
+            session, including its user, TTL and scheduling context so the
+            caller can round-trip it without losing state.
         """
         if request.session_id:
             existing = self.session_store.get(request.session_id)
@@ -39,9 +42,11 @@ class LoadSessionUseCase:
         record = self.session_store.create(user_id=request.user_id)
         return SessionSnapshotRecord(
             session_id=record.session_id,
+            user_id=record.user_id,
             workflow_state=record.workflow_state,
             selected_car_id=record.selected_car_id,
             selected_dealer_id=record.selected_dealer_id,
             conversation_history=record.conversation_history,
             scheduling_context=record.scheduling_context,
+            expires_at=record.expires_at,
         )

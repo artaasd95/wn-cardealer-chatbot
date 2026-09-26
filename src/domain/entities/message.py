@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import UTC, datetime
 
 """Message domain entity."""
 
@@ -16,7 +16,7 @@ class Message:
     content: str
     """The message text."""
 
-    created_at: datetime = field(default_factory=datetime.utcnow)
+    created_at: datetime = field(default_factory=lambda: datetime.now(UTC).replace(tzinfo=None))
     """Timestamp when the message was created."""
 
     def is_user_message(self) -> bool:

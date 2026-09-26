@@ -26,3 +26,24 @@ class ScheduleExtraction(BaseModel):
         le=1.0,
         description="Confidence that the extraction is complete and unambiguous.",
     )
+
+
+class SchedulingContext(BaseModel):
+    """Partial scheduling information collected across turns.
+
+    Stored on the session while the user is still answering date/time
+    questions, merged into the next turn's extraction.
+    """
+
+    date_raw: str | None = Field(
+        default=None,
+        description="Raw date input, or None if not yet collected.",
+    )
+    time_raw: str | None = Field(
+        default=None,
+        description="Raw time input, or None if not yet collected.",
+    )
+    timezone: str = Field(
+        default="UTC",
+        description="Timezone context.",
+    )

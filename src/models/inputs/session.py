@@ -4,24 +4,13 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
+from models.inputs.schedule import SchedulingContext
+
 """Internal models for session context."""
 
-
-class SchedulingContext(BaseModel):
-    """Partial scheduling information collected during a schedule flow."""
-
-    date_raw: str | None = Field(
-        default=None,
-        description="Raw date input, or None if not yet collected.",
-    )
-    time_raw: str | None = Field(
-        default=None,
-        description="Raw time input, or None if not yet collected.",
-    )
-    timezone: str = Field(
-        default="UTC",
-        description="Timezone context.",
-    )
+# SchedulingContext lives in models/inputs/schedule.py (it is a scheduling
+# contract); it is re-exported here because SessionContext embeds it.
+__all__ = ["SessionContext", "SchedulingContext"]
 
 
 class SessionContext(BaseModel):

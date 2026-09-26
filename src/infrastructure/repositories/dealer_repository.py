@@ -1,8 +1,13 @@
-"""Dealer repository implementation."""
+"""Dealer repository implementation.
+
+Reads come from the SQLAlchemy session factory (one short-lived session per
+operation), so the repository is safe to hold as a process-lifetime singleton.
+"""
 
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable
 
 from sqlalchemy.orm import Session
 
@@ -17,13 +22,14 @@ logger = logging.getLogger(__name__)
 class DealerRepositoryImpl(DealerRepository):
     """SQLAlchemy-based dealer repository."""
 
-    def __init__(self, session: Session) -> None:
-        """Initialize with a database session.
+    def __init__(self, session_factory: Callable[[], Session]) -> None:
+        """Initialize with a session factory.
 
         Args:
-            session: SQLAlchemy Session instance.
+            session_factory: A callable (typically ``database.SessionLocal``)
+                that produces a SQLAlchemy Session per operation.
         """
-        self.session = session
+        self._session_factory = session_factory
 
     def get_by_id(self, dealer_id: str) -> DealerRecord | None:
         """Retrieve a dealer by ID.
@@ -32,10 +38,11 @@ class DealerRepositoryImpl(DealerRepository):
             dealer_id: The dealer identifier.
 
         Returns:
-            DealerRecord if found, None otherwise.
+            DealerRecord if found, None if not found.
         """
-        dealer = self.session.query(Dealer).filter(Dealer.dealer_id == dealer_id).first()
-        return self._dealer_record(dealer) if dealer else None
+        with self._session_factory() as session:
+            dealer = session.query(Dealer).filter(Dealer.dealer_id == dealer_id).first()
+            return self._dealer_record(dealer) if dealer else None
 
     def get_with_cars(self, dealer_id: str) -> DealerWithCars | None:
         """Retrieve a dealer and all their cars.
@@ -44,29 +51,31 @@ class DealerRepositoryImpl(DealerRepository):
             dealer_id: The dealer identifier.
 
         Returns:
-            DealerWithCars with dealer details and car list, or None if dealer not found.
+            DealerWithCars with dealer details and car list, or None if not found.
         """
-        dealer = self.session.query(Dealer).filter(Dealer.dealer_id == dealer_id).first()
-        if not dealer:
-            return None
+        with self._session_factory() as session:
+            dealer = session.query(Dealer).filter(Dealer.dealer_id == dealer_id).first()
+            if not dealer:
+                return None
 
-        cars = self.session.query(Car).filter(Car.dealer_id == dealer_id).all()
+            record = self._dealer_record(dealer)
+            cars = session.query(Car).filter(Car.dealer_id == dealer_id).all()
 
-        return DealerWithCars(
-            dealer=self._dealer_record(dealer),
-            cars=[
-                {
-                    "car_id": car.car_id,
-                    "make": car.make,
-                    "model": car.model,
-                    "variant": car.variant,
-                    "year": car.year,
-                    "price_min": car.price_min,
-                    "price_max": car.price_max,
-                }
-                for car in cars
-            ],
-        )
+            return DealerWithCars(
+                dealer=record,
+                cars=[
+                    {
+                        "car_id": car.car_id,
+                        "make": car.make,
+                        "model": car.model,
+                        "variant": car.variant,
+                        "year": car.year,
+                        "price_min": car.price_min,
+                        "price_max": car.price_max,
+                    }
+                    for car in cars
+                ],
+            )
 
     def search_by_city(self, city: str) -> list[DealerRecord]:
         """Search for dealers in a city.
@@ -77,8 +86,9 @@ class DealerRepositoryImpl(DealerRepository):
         Returns:
             List of matching DealerRecords, or empty list.
         """
-        dealers = self.session.query(Dealer).filter(Dealer.city.ilike(f"%{city}%")).all()
-        return [self._dealer_record(d) for d in dealers]
+        with self._session_factory() as session:
+            dealers = session.query(Dealer).filter(Dealer.city.ilike(f"%{city}%")).all()
+            return [self._dealer_record(dealer) for dealer in dealers]
 
     @staticmethod
     def _dealer_record(dealer: Dealer) -> DealerRecord:

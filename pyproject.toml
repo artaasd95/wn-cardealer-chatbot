@@ -151,6 +151,10 @@ ban-relative-imports = "parents"
 [tool.mypy]
 python_version = "3.12"
 files = ["src"]
+# src layout: resolve `domain`, `DTO`, `ports`, ... as first-party sources
+# instead of as installed-but-untyped distributions.
+mypy_path = "src"
+explicit_package_bases = true
 strict = true
 warn_unreachable = true
 show_error_codes = true

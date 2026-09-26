@@ -67,7 +67,9 @@ class Car:
             return False
         if query.model and self.model.lower() != query.model.lower():
             return False
-        if query.variant and (self.variant is None or self.variant.lower() != query.variant.lower()):
+        if query.variant and (
+            self.variant is None or self.variant.lower() != query.variant.lower()
+        ):
             return False
         if query.year_from and self.year < query.year_from:
             return False
@@ -79,10 +81,4 @@ class Car:
         Returns:
             True if car_id, make, model, year, and dealer_id are all present.
         """
-        return bool(
-            self.car_id
-            and self.make
-            and self.model
-            and self.year
-            and self.dealer_id
-        )
+        return bool(self.car_id and self.make and self.model and self.year and self.dealer_id)

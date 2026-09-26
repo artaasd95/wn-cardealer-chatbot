@@ -1,19 +1,19 @@
 from __future__ import annotations
 
+from datetime import UTC, datetime
+
 import pytest
-from datetime import datetime
 from pydantic import ValidationError
 
-from models.inputs.session import SessionContext, SchedulingContext
 from models.inputs.car import CarExtraction, NormalizedCarQuery
 from models.inputs.dealer import DealerQuery
 from models.inputs.schedule import ScheduleExtraction
+from models.inputs.session import SchedulingContext, SessionContext
 from models.inputs.task import TaskDecision
-
-from models.outputs.session import SessionRecord, SessionSnapshotRecord, MessageRecord
 from models.outputs.car import CarRecord, CarSearchResult
 from models.outputs.dealer import DealerRecord, DealerWithCars
 from models.outputs.schedule import ScheduleRecord
+from models.outputs.session import MessageRecord, SessionRecord, SessionSnapshotRecord
 
 
 class TestSchedulingContext:
@@ -212,7 +212,7 @@ class TestMessageRecord:
 
     def test_valid_message(self):
         """Test a valid message record."""
-        now = datetime.utcnow()
+        now = datetime.now(UTC).replace(tzinfo=None)
         msg = MessageRecord(
             role="user",
             content="I'm looking for a BMW",

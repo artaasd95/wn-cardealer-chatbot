@@ -75,8 +75,7 @@ class LLMSettings(BaseSettings):
         """Ensure provider is supported."""
         if v != "openai_compatible":
             raise ValueError(
-                f"Unknown LLM_PROVIDER '{v}'. "
-                "Only 'openai_compatible' is currently supported."
+                f"Unknown LLM_PROVIDER '{v}'. Only 'openai_compatible' is currently supported."
             )
         return v
 
@@ -93,9 +92,7 @@ class LLMSettings(BaseSettings):
     def validate_base_url(cls, v: str) -> str:
         """Ensure base_url is a valid URL."""
         if not v.startswith(("http://", "https://")):
-            raise ValueError(
-                f"LLM_BASE_URL '{v}' must start with http:// or https://."
-            )
+            raise ValueError(f"LLM_BASE_URL '{v}' must start with http:// or https://.")
         return v
 
 

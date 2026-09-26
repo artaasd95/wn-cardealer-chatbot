@@ -1,12 +1,13 @@
 from __future__ import annotations
 
-import pytest
 from datetime import datetime
+
+import pytest
 from pydantic import ValidationError
 
+from DTO.outputs.car import CarCandidateList, CarSummary
 from DTO.outputs.chat import ChatResponse, ClarificationMessage
-from DTO.outputs.car import CarSummary, CarCandidateList
-from DTO.outputs.dealer import DealerDetails, CarReference
+from DTO.outputs.dealer import CarReference, DealerDetails
 from DTO.outputs.schedule import ScheduleConfirmation
 from DTO.outputs.session import SessionSnapshot
 

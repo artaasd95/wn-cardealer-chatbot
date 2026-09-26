@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import ast
-import sys
+import contextlib
 from pathlib import Path
 
 
@@ -17,9 +17,8 @@ def get_imports_from_file(filepath: Path) -> set[str]:
         if isinstance(node, ast.Import):
             for alias in node.names:
                 imports.add(alias.name.split(".")[0])
-        elif isinstance(node, ast.ImportFrom):
-            if node.module:
-                imports.add(node.module.split(".")[0])
+        elif isinstance(node, ast.ImportFrom) and node.module:
+            imports.add(node.module.split(".")[0])
 
     return imports
 
@@ -35,7 +34,6 @@ class TestImportBoundaries:
 
         # Allow infrastructure.llm.prompts since they're just prompt builders
         forbidden_imports = {"infrastructure"}
-        allowed_prompt_imports = {"infrastructure/llm/prompts"}
 
         for py_file in app_dir.rglob("*.py"):
             if "__pycache__" in str(py_file):
@@ -49,12 +47,13 @@ class TestImportBoundaries:
                 # Check if it's only importing prompts
                 with open(py_file) as f:
                     content = f.read()
-                    if "infrastructure.llm.prompts" in content or "from infrastructure.llm import prompts" in content:
+                    if (
+                        "infrastructure.llm.prompts" in content
+                        or "from infrastructure.llm import prompts" in content
+                    ):
                         continue  # Allow this violation
 
-            assert (
-                not violations
-            ), f"{py_file} imports forbidden modules: {violations}"
+            assert not violations, f"{py_file} imports forbidden modules: {violations}"
 
     @staticmethod
     def test_application_imports_from_ports() -> None:
@@ -92,7 +91,5 @@ class TestImportBoundaries:
                 continue
 
             # Just verify we can import infrastructure without errors
-            try:
+            with contextlib.suppress(SyntaxError):
                 get_imports_from_file(py_file)
-            except SyntaxError:
-                pass  # Ignore syntax errors in test files

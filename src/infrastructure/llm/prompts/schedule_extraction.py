@@ -33,31 +33,3 @@ IMPORTANT:
 User message: "{user_message}"
 
 Respond with JSON only, with fields: date_raw, time_raw, timezone (all nullable strings)."""
-
-
-def build_response_prompt(
-    task_summary: str,
-    data_summary: str,
-) -> str:
-    """Build a response wording prompt.
-
-    Args:
-        task_summary: A brief summary of what the task accomplished.
-        data_summary: A summary of the relevant data (car, dealer, schedule details).
-
-    Returns:
-        The full prompt text sent to the LLM for response generation.
-    """
-    return f"""You are a friendly car dealer chatbot assistant.
-
-Task result: {task_summary}
-
-Data: {data_summary}
-
-Write a natural, helpful response to the user that:
-1. Acknowledges what they asked for
-2. Provides the relevant information or next steps
-3. Is friendly and concise (2-3 sentences)
-4. Never includes technical jargon or internal details
-
-Respond with a single paragraph of natural English text."""

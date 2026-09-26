@@ -15,10 +15,12 @@ from infrastructure.database.tables.base import Base
 from infrastructure.llm.factory import LLMClientFactory
 from infrastructure.repositories.car_repository import CarRepositoryImpl
 from infrastructure.repositories.dealer_repository import DealerRepositoryImpl
+from infrastructure.repositories.schedule_repository import ScheduleRepositoryImpl
 from infrastructure.session.in_memory import InMemorySessionStore
 from ports.llm import LLMPort
 from ports.repositories.car_repository import CarRepository
 from ports.repositories.dealer_repository import DealerRepository
+from ports.repositories.schedule_repository import ScheduleRepository
 from ports.session_store import SessionStore
 
 logger = logging.getLogger(__name__)
@@ -49,6 +51,7 @@ class AppDependencies:
         # Initialize repositories
         self.car_repo: CarRepository = CarRepositoryImpl(self.database.SessionLocal)
         self.dealer_repo: DealerRepository = DealerRepositoryImpl(self.database.SessionLocal)
+        self.schedule_repo: ScheduleRepository = ScheduleRepositoryImpl(self.database.SessionLocal)
         logger.info("Repositories initialized")
 
         # Initialize session store
@@ -57,7 +60,7 @@ class AppDependencies:
 
         # Initialize chat service
         self.chat_service = ChatService(
-            self.session_store, self.llm, self.car_repo, self.dealer_repo
+            self.session_store, self.llm, self.car_repo, self.dealer_repo, self.schedule_repo
         )
         logger.info("Chat service initialized")
 

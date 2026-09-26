@@ -11,6 +11,7 @@ from DTO.outputs.chat import ChatResponse
 from ports.llm import LLMPort
 from ports.repositories.car_repository import CarRepository
 from ports.repositories.dealer_repository import DealerRepository
+from ports.repositories.schedule_repository import ScheduleRepository
 from ports.session_store import SessionStore
 
 
@@ -23,6 +24,7 @@ class ChatService:
         llm: LLMPort,
         car_repo: CarRepository,
         dealer_repo: DealerRepository,
+        schedule_repo: ScheduleRepository | None = None,
     ) -> None:
         """Initialize with all dependencies.
 
@@ -31,8 +33,11 @@ class ChatService:
             llm: LLMPort for LLM calls.
             car_repo: CarRepository for car search.
             dealer_repo: DealerRepository for dealer lookup.
+            schedule_repo: ScheduleRepository for persisting created schedules.
         """
-        self.handle_message = HandleUserMessageUseCase(session_store, llm, car_repo, dealer_repo)
+        self.handle_message = HandleUserMessageUseCase(
+            session_store, llm, car_repo, dealer_repo, schedule_repo
+        )
 
     def chat(self, request: ChatRequest) -> ChatResponse:
         """Handle a chat message.
