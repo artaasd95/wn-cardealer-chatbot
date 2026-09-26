@@ -104,8 +104,11 @@ class TestFullTurnOverHttp:
         _chat(client, "book a call for 2030-05-15 at 3pm UTC", first["session_id"])
 
         engine = create_engine(database_url)
-        with engine.connect() as conn:
-            rows = conn.execute(text("SELECT dealer_id, car_id, status FROM schedule")).fetchall()
+        try:
+            with engine.connect() as conn:
+                rows = conn.execute(text("SELECT dealer_id, car_id, status FROM schedule")).fetchall()
+        finally:
+            engine.dispose()
         assert len(rows) == 1
         assert rows[0][0] == "D-003"
         assert rows[0][1] == "C-0003"

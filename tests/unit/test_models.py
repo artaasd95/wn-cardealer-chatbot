@@ -278,6 +278,7 @@ class TestSessionSnapshotRecord:
             selected_car_id="C-001",
             selected_dealer_id="D-001",
             conversation_history=[],
+            scheduling_context={},
             user_id="user_456",
             expires_at=None,
         )
@@ -458,6 +459,7 @@ class TestScheduleRecord:
         scheduled_time = datetime(2024, 12, 26, 15, 0, 0)
         rec = ScheduleRecord(
             schedule_id="sched_123",
+            session_id="sess_123",
             dealer_id="D-001",
             car_id="C-001",
             scheduled_for=scheduled_time,
@@ -474,6 +476,7 @@ class TestScheduleRecord:
         scheduled_time = datetime(2024, 12, 26, 15, 0, 0)
         rec = ScheduleRecord(
             schedule_id="sched_123",
+            session_id="sess_123",
             dealer_id="D-001",
             car_id="C-001",
             scheduled_for=scheduled_time,
@@ -485,6 +488,7 @@ class TestScheduleRecord:
         scheduled_time = datetime(2024, 12, 26, 15, 0, 0)
         rec = ScheduleRecord(
             schedule_id="sched_123",
+            session_id="sess_123",
             dealer_id="D-001",
             car_id="C-001",
             scheduled_for=scheduled_time,

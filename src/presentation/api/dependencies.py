@@ -81,6 +81,8 @@ class AppDependencies:
     @classmethod
     def reset(cls) -> None:
         """Reset singleton (for testing)."""
+        if cls._instance is not None:
+            cls._instance.database.close()
         cls._instance = None
 
 

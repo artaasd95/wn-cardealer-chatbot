@@ -41,7 +41,7 @@ class GetDealerDetailsUseCase:
 
             if not dealer:
                 logger.warning(f"Dealer {dealer_id} not found")
-                raise DealerNotFoundError(f"Dealer {dealer_id} not found")
+                raise DealerNotFoundError(dealer_id)
 
             next_state = DealerDetailsWorkflow.advance(dealer_found=True)
 

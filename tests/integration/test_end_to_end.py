@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import pytest
+from pydantic import ValidationError
 
 from application.chat.service import ChatService
 from DTO.inputs.chat import ChatRequest
@@ -51,13 +52,9 @@ class TestEndToEnd:
         assert response2.session_id == session_id
 
     def test_error_handling_invalid_request(self, chat_service: ChatService) -> None:
-        """Test that invalid requests are handled gracefully."""
-        request = ChatRequest(message="", user_id="test-user")
-        response = chat_service.chat(request)
-
-        # Should return error response, not raise
-        assert response is not None
-        assert response.session_id is not None
+        """Input DTO validation rejects an empty message before the service runs."""
+        with pytest.raises(ValidationError):
+            ChatRequest(message="", user_id="test-user")
 
     def test_conversation_history_accumulates(self, chat_service: ChatService) -> None:
         """Test that conversation history accumulates across turns."""

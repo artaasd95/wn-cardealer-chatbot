@@ -154,7 +154,12 @@ class TestItemLookupBranches:
     def test_car_without_dealer_still_selects_the_car(self, session_store: SessionStore) -> None:
         """Edge: car exists but its dealer does not → CAR_SELECTED, no crash."""
         car = make_car(
-            "C-9004", make="Tata", model="Punch", variant="Creative S", dealer_id="D-999"
+            "C-9004",
+            make="Tata",
+            model="Punch",
+            variant="Creative S",
+            year=2024,
+            dealer_id="D-999",
         )
         llm = FakeLLM()
         llm.enqueue(task_decision("ITEM_LOOKUP"))

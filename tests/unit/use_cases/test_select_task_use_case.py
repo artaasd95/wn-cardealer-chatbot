@@ -55,11 +55,11 @@ class TestSelectTaskUseCase:
 
         assert SelectTaskUseCase(fake_llm).execute("x", WorkflowState.START) == TaskType.UNKNOWN
 
-    def test_state_guard_rejects_task(self, fake_llm: FakeLLM) -> None:
+    def test_state_guard_rejects_item_lookup_after_completion(self, fake_llm: FakeLLM) -> None:
         """Failure branch: a task refused from the current state routes UNKNOWN."""
-        fake_llm.enqueue(task_decision("DEALER_DETAILS", 0.99))
+        fake_llm.enqueue(task_decision("ITEM_LOOKUP", 0.99))
 
-        result = SelectTaskUseCase(fake_llm).execute("dealer details", WorkflowState.START)
+        result = SelectTaskUseCase(fake_llm).execute("find another car", WorkflowState.COMPLETE)
 
         assert result == TaskType.UNKNOWN
 

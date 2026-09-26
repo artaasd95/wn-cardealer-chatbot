@@ -36,10 +36,9 @@ def _optional_int(value: str | None) -> int | None:
     text = (value or "").strip()
     if not text:
         return None
-    try:
-        return int(float(text))
-    except ValueError:
+    if not text.isdigit():
         return None
+    return int(text)
 
 
 def _optional_float(value: str | None) -> float | None:
@@ -175,3 +174,14 @@ class Database:
             A SQLAlchemy Session instance.
         """
         return self.SessionLocal()
+
+    def close(self) -> None:
+        """Dispose pooled connections held by the engine."""
+        self.engine.dispose()
+
+    def __del__(self) -> None:
+        """Best-effort cleanup for short-lived test instances."""
+        try:
+            self.close()
+        except Exception:
+            pass

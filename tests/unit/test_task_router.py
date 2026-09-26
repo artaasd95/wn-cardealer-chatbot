@@ -51,25 +51,25 @@ class TestTaskRouter:
         routed = TaskRouter.route(decision, WorkflowState.AWAITING_ACTION)
         assert routed == TaskType.SCHEDULE_CALL
 
-    def test_route_dealer_details_from_start_invalid(self) -> None:
-        """Test that DEALER_DETAILS from START is routed to UNKNOWN."""
+    def test_route_dealer_details_from_start(self) -> None:
+        """Test that DEALER_DETAILS from START reaches its own selection guard."""
         decision = TaskDecision(
             task_type=TaskType.DEALER_DETAILS.value,
             confidence=0.80,
-            reason="Invalid state",
+            reason="User wants dealer info before selecting a car",
         )
         routed = TaskRouter.route(decision, WorkflowState.START)
-        assert routed == TaskType.UNKNOWN
+        assert routed == TaskType.DEALER_DETAILS
 
-    def test_route_schedule_call_from_start_invalid(self) -> None:
-        """Test that SCHEDULE_CALL from START is routed to UNKNOWN."""
+    def test_route_schedule_call_from_start(self) -> None:
+        """Test that SCHEDULE_CALL from START reaches its own selection guard."""
         decision = TaskDecision(
             task_type=TaskType.SCHEDULE_CALL.value,
             confidence=0.75,
-            reason="Invalid state",
+            reason="User wants to schedule before selecting a car",
         )
         routed = TaskRouter.route(decision, WorkflowState.START)
-        assert routed == TaskType.UNKNOWN
+        assert routed == TaskType.SCHEDULE_CALL
 
     def test_route_item_lookup_from_complete_invalid(self) -> None:
         """Test that ITEM_LOOKUP from COMPLETE is routed to UNKNOWN."""

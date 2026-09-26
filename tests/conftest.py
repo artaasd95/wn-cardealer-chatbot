@@ -47,7 +47,8 @@ def test_database(test_settings: Settings) -> Database:
     db_settings = DatabaseSettings(_env_file=None, url="sqlite:///:memory:")
     db = Database(db_settings)
     db.init_schema(Base.metadata)
-    return db
+    yield db
+    db.close()
 
 
 @pytest.fixture

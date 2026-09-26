@@ -103,7 +103,7 @@ class TestDealerRepository:
         dealer = dealer_repo.get_with_cars("D-001")
 
         if dealer:
-            assert dealer.dealer_id == "D-001"
+            assert dealer.dealer.dealer_id == "D-001"
             # May or may not have cars depending on fixtures
 
     def test_search_dealer_by_city(self, dealer_repo: DealerRepository) -> None:
