@@ -11,11 +11,12 @@ happen exclusively in infrastructure/llm/factory.py, read from .env.
 
 from __future__ import annotations
 
-from typing import Protocol, TypeVar
+from typing import Protocol, TypeVar, runtime_checkable
 
 T = TypeVar("T")
 
 
+@runtime_checkable
 class LLMPort(Protocol[T]):  # noqa: UP046
     """Protocol for structured LLM completions.
 

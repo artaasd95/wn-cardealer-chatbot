@@ -6,7 +6,7 @@ Coordinates session operations: creation, retrieval, persistence, and state mana
 from __future__ import annotations
 
 import logging
-from datetime import datetime
+from datetime import UTC, datetime
 from uuid import uuid4
 
 from domain.enums.workflow_state import WorkflowState
@@ -49,10 +49,9 @@ class SessionService:
                     selected_car_id=snapshot.selected_car_id,
                     selected_dealer_id=snapshot.selected_dealer_id,
                     conversation_history=snapshot.conversation_history,
-                    scheduling_context=snapshot.scheduling_context,
-                    expires_at=datetime.utcnow(),  # Placeholder
-                    created_at=datetime.utcnow(),  # Placeholder
-                    updated_at=datetime.utcnow(),
+                    expires_at=datetime.now(UTC),  # Placeholder
+                    created_at=datetime.now(UTC),  # Placeholder
+                    updated_at=datetime.now(UTC),
                 )
 
         # Create new
@@ -125,7 +124,7 @@ class SessionService:
             message_id=str(uuid4()),
             role=role,
             content=content,
-            created_at=datetime.utcnow(),
+            created_at=datetime.now(UTC),
         )
 
         record.conversation_history.append(message)
@@ -150,8 +149,7 @@ class SessionService:
         record.selected_car_id = None
         record.selected_dealer_id = None
         record.conversation_history = []
-        record.scheduling_context = {}
-        record.updated_at = datetime.utcnow()
+        record.updated_at = datetime.now(UTC)
 
         logger.info(f"Session {record.session_id} reset to START state")
         return record
@@ -167,7 +165,7 @@ class SessionService:
             Updated SessionRecord with the new state.
         """
         record.workflow_state = new_state.value
-        record.updated_at = datetime.utcnow()
+        record.updated_at = datetime.now(UTC)
         return record
 
     def set_selected_car(self, record: SessionRecord, car_id: str) -> SessionRecord:
@@ -181,7 +179,7 @@ class SessionService:
             Updated SessionRecord.
         """
         record.selected_car_id = car_id
-        record.updated_at = datetime.utcnow()
+        record.updated_at = datetime.now(UTC)
         return record
 
     def set_selected_dealer(self, record: SessionRecord, dealer_id: str) -> SessionRecord:
@@ -195,7 +193,7 @@ class SessionService:
             Updated SessionRecord.
         """
         record.selected_dealer_id = dealer_id
-        record.updated_at = datetime.utcnow()
+        record.updated_at = datetime.now(UTC)
         return record
 
     def set_scheduling_context(self, record: SessionRecord, context: dict) -> SessionRecord:
@@ -209,5 +207,7 @@ class SessionService:
             Updated SessionRecord.
         """
         record.scheduling_context = context
-        record.updated_at = datetime.utcnow()
+        record.updated_at = datetime.now(UTC)
         return record
+
+

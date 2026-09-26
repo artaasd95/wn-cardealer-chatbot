@@ -6,7 +6,7 @@ Orchestrates the scheduling workflow: extract date/time, validate, create schedu
 from __future__ import annotations
 
 import logging
-from datetime import datetime
+from datetime import UTC, datetime
 from uuid import uuid4
 
 from application.tasks.schedule_call.workflow import ScheduleCallWorkflow
@@ -67,10 +67,10 @@ class ScheduleCallUseCase:
         try:
             # In a real system, parse extraction.date_raw and extraction.time_raw
             # For now, use a placeholder (today at 14:00)
-            scheduled_for = datetime.utcnow().replace(hour=14, minute=0, second=0)
+            scheduled_for = datetime.now(UTC).replace(hour=14, minute=0, second=0)
 
             # Step 4: Validate not in the past
-            if scheduled_for < datetime.utcnow():
+            if scheduled_for < datetime.now(UTC):
                 logger.warning(f"Scheduled time is in the past: {scheduled_for}")
                 raise InvalidScheduleError(
                     "The scheduled time cannot be in the past. Please choose a future date and time."

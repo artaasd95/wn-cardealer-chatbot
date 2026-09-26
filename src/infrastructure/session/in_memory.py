@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import logging
 import uuid
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 
 from models.outputs.session import SessionRecord, SessionSnapshotRecord
 from ports.session_store import SessionStore
@@ -38,7 +38,7 @@ class InMemorySessionStore(SessionStore):
 
         record = self._sessions[session_id]
 
-        if datetime.utcnow() > record.expires_at:
+        if datetime.now(UTC) > record.expires_at:
             del self._sessions[session_id]
             logger.info(f"Session {session_id} expired and removed")
             return None
@@ -65,7 +65,7 @@ class InMemorySessionStore(SessionStore):
         from domain.enums.workflow_state import WorkflowState
 
         session_id = str(uuid.uuid4())
-        now = datetime.utcnow()
+        now = datetime.now(UTC)
         expires_at = now + timedelta(seconds=ttl_seconds)
 
         record = SessionRecord(
@@ -91,7 +91,7 @@ class InMemorySessionStore(SessionStore):
         Args:
             record: The SessionRecord to save.
         """
-        record.updated_at = datetime.utcnow()
+        record.updated_at = datetime.now(UTC)
         self._sessions[record.session_id] = record
         logger.debug(f"Saved session {record.session_id}")
 
@@ -111,7 +111,7 @@ class InMemorySessionStore(SessionStore):
         Returns:
             The count of sessions deleted.
         """
-        now = datetime.utcnow()
+        now = datetime.now(UTC)
         expired = [sid for sid, record in self._sessions.items() if now > record.expires_at]
 
         for sid in expired:
