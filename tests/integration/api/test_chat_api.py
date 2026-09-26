@@ -105,9 +105,7 @@ class TestFullTurnOverHttp:
 
         engine = create_engine(database_url)
         with engine.connect() as conn:
-            rows = conn.execute(
-                text("SELECT dealer_id, car_id, status FROM schedule")
-            ).fetchall()
+            rows = conn.execute(text("SELECT dealer_id, car_id, status FROM schedule")).fetchall()
         assert len(rows) == 1
         assert rows[0][0] == "D-003"
         assert rows[0][1] == "C-0003"
@@ -205,6 +203,7 @@ class TestFailureOverHttp:
 # Scripted LLM responses shared by the tests above.
 # ---------------------------------------------------------------------------
 
+
 def _task(task_type: str) -> TaskDecision:
     """Build a scripted intent decision.
 
@@ -241,7 +240,9 @@ def _car(
     )
 
 
-def _schedule(date_raw: str | None, time_raw: str | None, timezone: str | None) -> ScheduleExtraction:
+def _schedule(
+    date_raw: str | None, time_raw: str | None, timezone: str | None
+) -> ScheduleExtraction:
     """Build a scripted schedule extraction.
 
     Args:

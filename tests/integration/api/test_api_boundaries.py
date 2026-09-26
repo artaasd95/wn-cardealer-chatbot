@@ -50,9 +50,7 @@ class TestRequestValidation:
 class TestHealth:
     """GET /health reports liveness and the provider name, never the key."""
 
-    def test_health_reports_provider_without_leaking_the_key(
-        self, client: TestClient
-    ) -> None:
+    def test_health_reports_provider_without_leaking_the_key(self, client: TestClient) -> None:
         """Plan: provider name yes, api key never."""
         response = client.get("/api/health")
 
@@ -69,7 +67,9 @@ class TestSessionLifecycle:
     def test_deleted_session_starts_over(self, client: TestClient, fake_llm: FakeLLM) -> None:
         """Edge: after a restart the conversation begins from START again."""
         fake_llm.enqueue(TaskDecision(task_type="ITEM_LOOKUP", confidence=0.9))
-        fake_llm.enqueue(CarExtraction(make="BMW", model="3 Series", variant="320i", year_from=2021))
+        fake_llm.enqueue(
+            CarExtraction(make="BMW", model="3 Series", variant="320i", year_from=2021)
+        )
         first = client.post(
             "/api/chat", json={"session_id": None, "message": "bmw 3 series 320i"}
         ).json()

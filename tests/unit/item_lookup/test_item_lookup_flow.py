@@ -153,7 +153,9 @@ class TestItemLookupBranches:
 
     def test_car_without_dealer_still_selects_the_car(self, session_store: SessionStore) -> None:
         """Edge: car exists but its dealer does not → CAR_SELECTED, no crash."""
-        car = make_car("C-9004", make="Tata", model="Punch", variant="Creative S", dealer_id="D-999")
+        car = make_car(
+            "C-9004", make="Tata", model="Punch", variant="Creative S", dealer_id="D-999"
+        )
         llm = FakeLLM()
         llm.enqueue(task_decision("ITEM_LOOKUP"))
         llm.enqueue(CarExtraction(make="tata", model="punch", variant="creative s"))
@@ -189,6 +191,7 @@ class TestItemLookupBranches:
         assert response.reply.startswith("Found Nissan Kicks (2023) — Ask the dealer.")
         # no dealer stub wired here: the missing dealer is its own branch
         assert response.workflow_state == "CAR_SELECTED"
+
     def test_extraction_is_normalized_before_search(self, session_store: SessionStore) -> None:
         """Capitalization/alias input is normalized before it reaches SQL."""
         llm = FakeLLM()

@@ -9,7 +9,6 @@ from application.use_cases.handle_user_message import HandleUserMessageUseCase
 from domain.enums.workflow_state import WorkflowState
 from DTO.inputs.chat import ChatRequest
 from models.inputs.response import ResponseWording
-from models.inputs.task import TaskDecision
 from ports.session_store import SessionStore
 from tests.fakes import (
     FakeLLM,
@@ -88,7 +87,9 @@ class TestDealerDetailsBranches:
         """Happy path: the LLM words the details built from the record."""
         llm = FakeLLM()
         llm.enqueue(task_decision("DEALER_DETAILS"))
-        llm.enqueue(wording_reply("Prestige Cars sits at 78 MG Road, Bangalore. Call +91-80-2552-1003."))
+        llm.enqueue(
+            wording_reply("Prestige Cars sits at 78 MG Road, Bangalore. Call +91-80-2552-1003.")
+        )
         dealer_repo = StubDealerRepository(by_id={"D-003": make_dealer("D-003")})
         session_id = _selected_session(session_store)
 
@@ -124,9 +125,7 @@ class TestDealerDetailsBranches:
             "Rating: 4.7/5"
         )
 
-    def test_incomplete_dealer_row_shows_partial_details(
-        self, session_store: SessionStore
-    ) -> None:
+    def test_incomplete_dealer_row_shows_partial_details(self, session_store: SessionStore) -> None:
         """Edge: missing email/rating → partial details, never a crash."""
         llm = FakeLLM()
         llm.enqueue(task_decision("DEALER_DETAILS"))

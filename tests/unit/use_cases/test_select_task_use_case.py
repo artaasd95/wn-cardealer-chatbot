@@ -29,7 +29,9 @@ class TestSelectTaskUseCase:
         """Happy path: DEALER_DETAILS is allowed once a car is selected."""
         fake_llm.enqueue(task_decision("DEALER_DETAILS", 0.9))
 
-        result = SelectTaskUseCase(fake_llm).execute("dealer details", WorkflowState.AWAITING_ACTION)
+        result = SelectTaskUseCase(fake_llm).execute(
+            "dealer details", WorkflowState.AWAITING_ACTION
+        )
 
         assert result == TaskType.DEALER_DETAILS
 

@@ -101,9 +101,7 @@ class TestScheduleCallWorkflowStates:
 class TestScheduleCallTurnBranches:
     """Turn-level branches: create, ask, clarify, reject, guard."""
 
-    def test_full_scheduling_turn_persists_and_confirms(
-        self, session_store: SessionStore
-    ) -> None:
+    def test_full_scheduling_turn_persists_and_confirms(self, session_store: SessionStore) -> None:
         """Happy path: date + time + timezone creates and persists a record."""
         llm = FakeLLM()
         llm.enqueue(task_decision("SCHEDULE_CALL"))

@@ -60,7 +60,9 @@ class TestHandleUserMessageHappyPath:
         llm = FakeLLM()
         llm.enqueue(task_decision("ITEM_LOOKUP"))
         llm.enqueue(
-            CarExtraction(make="BMW", model="3 Series", variant="320i", year_from=2021, year_to=2021)
+            CarExtraction(
+                make="BMW", model="3 Series", variant="320i", year_from=2021, year_to=2021
+            )
         )
         car_repo = StubCarRepository(
             CarSearchResult(status="found", cars=[make_car("C-0003")], candidates=[])
@@ -136,14 +138,10 @@ class TestHandleUserMessageHappyPath:
         llm.enqueue(task_decision("ITEM_LOOKUP"))
         llm.enqueue(CarExtraction(make="bmw", model="3 series"))
         llm.enqueue(task_decision("UNKNOWN"))
-        service = _service(
-            llm, session_store, StubCarRepository(), StubDealerRepository()
-        )
+        service = _service(llm, session_store, StubCarRepository(), StubDealerRepository())
 
         first = service.execute(ChatRequest(message="bmw 3 series", user_id="u-1"))
-        second = service.execute(
-            ChatRequest(session_id=first.session_id, message="tell me a joke")
-        )
+        second = service.execute(ChatRequest(session_id=first.session_id, message="tell me a joke"))
 
         stored = session_store.get(second.session_id)
         assert stored is not None

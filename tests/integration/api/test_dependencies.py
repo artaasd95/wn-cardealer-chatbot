@@ -8,7 +8,7 @@ from config.settings import LLMSettings
 from domain.exceptions import ConfigError
 from infrastructure.llm.factory import LLMClientFactory
 from presentation.api.dependencies import AppDependencies
-from tests.fakes import FakeLLM
+from tests.fakes import FakeLLM, make_test_settings
 
 pytestmark = pytest.mark.integration
 
@@ -37,7 +37,7 @@ class TestCompositionRoot:
             "create",
             lambda settings: calls.append(settings.provider) or FakeLLM(),
         )
-        settings = make_settings(database_url)
+        settings = make_test_settings(database_url)
 
         container = AppDependencies.get_instance(settings)
         again = AppDependencies.get_instance(settings)
