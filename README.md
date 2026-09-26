@@ -62,6 +62,14 @@ python -m pip install --upgrade pip
 python -m pip install -e ".[dev]"
 ```
 
+Alternatively, install the exact pinned dependency set first (captured from
+the project virtual environment with `pip freeze`):
+
+```bash
+python -m pip install -r requirements.txt
+python -m pip install -e ".[dev]" --no-deps
+```
+
 The distribution name is `wn-cardealer-chatbot`.
 
 After installation, the console entrypoint is available as:
@@ -157,7 +165,6 @@ CLI commands:
 - `/reset` clears the current session
 - `/quit` exits the program
 
-### 2. FastAPI API
 ### 2. FastAPI API
 
 Start the backend first. When working from the repository (no install), the recommended command is:

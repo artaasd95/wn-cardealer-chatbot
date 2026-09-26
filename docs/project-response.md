@@ -113,6 +113,9 @@ Detailed coverage is documented in [edge-cases.md](edge-cases.md).
 ### Dependencies
 
 - runtime and dev dependencies are declared in `pyproject.toml`
+- the exact resolved versions are pinned in `requirements.txt`
+  (`pip freeze` of the project virtual environment), so the environment is
+  reproducible in a virtual environment
 - no extra framework dependency was added for orchestration
 
 ### Code quality
