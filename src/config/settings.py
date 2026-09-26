@@ -9,7 +9,7 @@ The LLM provider is selected here and never changed during the process lifetime.
 
 from __future__ import annotations
 
-from pydantic import Field, validator
+from pydantic import ConfigDict, Field, field_validator
 from pydantic_settings import BaseSettings
 
 from domain.exceptions import ConfigError
@@ -31,6 +31,14 @@ class LLMSettings(BaseSettings):
     Swapping provider requires only changing LLM_PROVIDER and LLM_BASE_URL
     in .env. No code change needed.
     """
+
+    model_config = ConfigDict(
+        env_prefix="LLM_",
+        case_sensitive=False,
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
 
     provider: str = Field(
         default="openai_compatible",
@@ -61,154 +69,94 @@ class LLMSettings(BaseSettings):
         description="Max retries on transient failure.",
     )
 
-    @validator("provider")
+    @field_validator("provider")
     @classmethod
     def validate_provider(cls, v: str) -> str:
-        """Ensure provider is supported.
-
-        Args:
-            v: The provider value from .env.
-
-        Returns:
-            The validated provider string.
-
-        Raises:
-            ValueError: If provider is unknown.
-        """
+        """Ensure provider is supported."""
         if v != "openai_compatible":
             raise ValueError(
                 f"Unknown LLM_PROVIDER '{v}'. "
-                "Only 'openai_compatible' is currently supported. "
-                "It works with OpenAI, Azure, Groq, Together, Ollama, vLLM, LM Studio."
+                "Only 'openai_compatible' is currently supported."
             )
         return v
 
-    @validator("api_key")
+    @field_validator("api_key")
     @classmethod
     def validate_api_key(cls, v: str) -> str:
-        """Ensure api_key is not the placeholder.
-
-        Args:
-            v: The api_key value from .env.
-
-        Returns:
-            The validated api_key string.
-
-        Raises:
-            ValueError: If api_key is the placeholder.
-        """
+        """Ensure api_key is not the placeholder."""
         if v == "sk-placeholder" or v == "your-api-key-here":
-            raise ValueError(
-                "LLM_API_KEY is not configured. "
-                "Edit .env and set LLM_API_KEY to your actual API key."
-            )
+            raise ValueError("LLM_API_KEY is not configured. Set it in .env.")
         return v
 
-    @validator("base_url")
+    @field_validator("base_url")
     @classmethod
     def validate_base_url(cls, v: str) -> str:
-        """Ensure base_url is a valid URL.
-
-        Args:
-            v: The base_url value from .env.
-
-        Returns:
-            The validated base_url string.
-
-        Raises:
-            ValueError: If base_url is malformed.
-        """
+        """Ensure base_url is a valid URL."""
         if not v.startswith(("http://", "https://")):
             raise ValueError(
-                f"LLM_BASE_URL '{v}' must start with http:// or https://. "
-                "Check .env and ensure the URL is complete."
+                f"LLM_BASE_URL '{v}' must start with http:// or https://."
             )
         return v
-
-    class Config:
-        """Pydantic settings config."""
-
-        env_prefix = "LLM_"
-        case_sensitive = False
 
 
 class AppSettings(BaseSettings):
     """Application configuration read from .env."""
 
-    env: str = Field(default="development", description="Environment: development or production")
+    model_config = ConfigDict(env_prefix="APP_", case_sensitive=False, extra="ignore")
+
+    env: str = Field(
+        default="development",
+        description="Environment: development or production",
+    )
     host: str = Field(default="127.0.0.1", description="API host")
     port: int = Field(default=8000, description="API port")
-
-    class Config:
-        """Pydantic settings config."""
-
-        env_prefix = "APP_"
-        case_sensitive = False
 
 
 class DatabaseSettings(BaseSettings):
     """Database configuration read from .env."""
 
+    model_config = ConfigDict(env_prefix="DATABASE_", case_sensitive=False, extra="ignore")
+
     url: str = Field(
         default="sqlite:///./cardealer.db",
-        description="Database connection URL. SQLite default for local development.",
+        description="Database connection URL.",
     )
     echo: bool = Field(
         default=False,
-        description="Log all SQL statements (noisy; use for debugging only).",
+        description="Log all SQL statements (debugging only).",
     )
-
-    class Config:
-        """Pydantic settings config."""
-
-        env_prefix = "DATABASE_"
-        case_sensitive = False
 
 
 class SessionSettings(BaseSettings):
     """Session configuration read from .env."""
+
+    model_config = ConfigDict(env_prefix="SESSION_", case_sensitive=False, extra="ignore")
 
     ttl_seconds: int = Field(
         default=3600,
         description="Session TTL in seconds (1 hour default).",
     )
 
-    class Config:
-        """Pydantic settings config."""
-
-        env_prefix = "SESSION_"
-        case_sensitive = False
-
 
 class Settings:
-    """Root settings container, read and validated once at startup.
-
-    This is a simple container (not a Pydantic model) to avoid double-validation
-    and provide a single point of access to all configuration.
-
-    On instantiation, all subsettings are validated. If any setting is invalid,
-    a ConfigError is raised immediately, preventing the app from starting.
-    """
+    """Root settings container, read and validated once at startup."""
 
     def __init__(self) -> None:
         """Load and validate all settings from .env."""
         try:
-            self.llm = LLMSettings()
-            self.app = AppSettings()
-            self.database = DatabaseSettings()
-            self.session = SessionSettings()
+            self.llm_settings = LLMSettings()
+            self.app_settings = AppSettings()
+            self.database_settings = DatabaseSettings()
+            self.session_settings = SessionSettings()
         except Exception as e:
-            raise ConfigError(
-                f"Configuration error at startup. Check .env and your environment. {str(e)}"
-            ) from e
+            raise ConfigError("startup", f"Check .env. {str(e)}") from e
 
     def __repr__(self) -> str:
         """Return a safe repr that never exposes the API key."""
         return (
             f"Settings("
-            f"provider={self.llm.provider}, "
-            f"base_url={self.llm.base_url}, "
-            f"model={self.llm.model}, "
-            f"env={self.app.env}"
+            f"provider={self.llm_settings.provider}, "
+            f"model={self.llm_settings.model}, "
+            f"env={self.app_settings.env}"
             f")"
         )

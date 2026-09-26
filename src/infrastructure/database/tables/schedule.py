@@ -5,9 +5,8 @@ from __future__ import annotations
 from datetime import datetime
 
 from sqlalchemy import Column, DateTime, ForeignKey, String
-from sqlalchemy.orm import declarative_base
+from infrastructure.database.tables.base import Base
 
-Base = declarative_base()
 
 
 class Schedule(Base):

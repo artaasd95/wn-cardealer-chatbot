@@ -3,9 +3,8 @@
 from __future__ import annotations
 
 from sqlalchemy import Column, ForeignKey, Integer, String
-from sqlalchemy.orm import declarative_base
+from infrastructure.database.tables.base import Base
 
-Base = declarative_base()
 
 
 class Car(Base):
