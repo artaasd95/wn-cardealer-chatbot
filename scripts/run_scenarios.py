@@ -193,6 +193,15 @@ def load_scenario_file(path: Path) -> Scenario:
         if required not in raw:
             raise ValueError(f"{path}: missing required field '{required}'")
 
+    declared_suite = str(raw["suite"])
+    suite_from_path = path.parent.name
+    if declared_suite not in SUITES:
+        raise ValueError(f"{path}: invalid suite {declared_suite!r}; expected one of {SUITES}")
+    if suite_from_path in SUITES and declared_suite != suite_from_path:
+        raise ValueError(
+            f"{path}: suite {declared_suite!r} does not match directory {suite_from_path!r}"
+        )
+
     steps = [
         Step(
             name=step.get("name", f"step {index + 1}"),
@@ -237,10 +246,18 @@ def load_scenarios(
     """
     suites = SUITES if suite == "all" else (suite,)
     scenarios: list[Scenario] = []
+    seen_ids: dict[str, Path] = {}
     for one_suite in suites:
         suite_dir = scenarios_dir / one_suite
         for path in sorted(suite_dir.glob("*.json")):
             scenario = load_scenario_file(path)
+            previous = seen_ids.get(scenario.scenario_id)
+            if previous is not None:
+                raise ValueError(
+                    "duplicate scenario id "
+                    f"{scenario.scenario_id!r} in {previous} and {path}"
+                )
+            seen_ids[scenario.scenario_id] = path
             if scenario_filter and scenario_filter not in scenario.scenario_id:
                 continue
             if tags and not set(tags) & set(scenario.tags):

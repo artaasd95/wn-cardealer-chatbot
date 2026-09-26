@@ -11,6 +11,7 @@ from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
+from config.logging import configure_logging
 from config.settings import Settings
 from domain.exceptions import DomainError
 from presentation.api.dependencies import AppDependencies
@@ -31,6 +32,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     """
     if settings is None:
         settings = Settings()
+
+    configure_logging(
+        level=settings.app_settings.log_level,
+        log_file=settings.app_settings.log_file,
+    )
 
     app = FastAPI(
         title="Car Dealer Chatbot API",

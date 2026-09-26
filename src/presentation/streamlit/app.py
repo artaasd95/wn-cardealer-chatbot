@@ -12,6 +12,12 @@ import uuid
 import requests
 import streamlit as st
 
+from config.logging import configure_logging
+from config.settings import AppSettings
+
+_app_settings = AppSettings()
+configure_logging(level=_app_settings.log_level, log_file=_app_settings.log_file)
+
 logger = logging.getLogger(__name__)
 
 # Configure Streamlit page

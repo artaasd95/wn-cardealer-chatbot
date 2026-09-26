@@ -15,6 +15,17 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 from domain.exceptions import ConfigError
 
 
+def _model_config(prefix: str) -> SettingsConfigDict:
+    """Build shared settings config for one environment prefix."""
+    return SettingsConfigDict(
+        env_prefix=prefix,
+        case_sensitive=False,
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
+
+
 class LLMSettings(BaseSettings):
     """LLM provider configuration read from .env.
 
@@ -32,13 +43,7 @@ class LLMSettings(BaseSettings):
     in .env. No code change needed.
     """
 
-    model_config = SettingsConfigDict(
-        env_prefix="LLM_",
-        case_sensitive=False,
-        env_file=".env",
-        env_file_encoding="utf-8",
-        extra="ignore",
-    )
+    model_config = _model_config("LLM_")
 
     provider: str = Field(
         default="openai_compatible",
@@ -99,7 +104,7 @@ class LLMSettings(BaseSettings):
 class AppSettings(BaseSettings):
     """Application configuration read from .env."""
 
-    model_config = SettingsConfigDict(env_prefix="APP_", case_sensitive=False, extra="ignore")
+    model_config = _model_config("APP_")
 
     env: str = Field(
         default="development",
@@ -107,12 +112,38 @@ class AppSettings(BaseSettings):
     )
     host: str = Field(default="127.0.0.1", description="API host")
     port: int = Field(default=8000, description="API port")
+    log_level: str = Field(default="INFO", description="Application log level.")
+    log_file: str | None = Field(
+        default=None,
+        description="Optional rotating log file path.",
+    )
+
+    @field_validator("log_level")
+    @classmethod
+    def validate_log_level(cls, v: str) -> str:
+        """Ensure log_level is one of the standard library log levels."""
+        value = v.strip().upper()
+        allowed_levels = {"CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG", "NOTSET"}
+        if value not in allowed_levels:
+            raise ValueError(
+                f"APP_LOG_LEVEL '{v}' must be one of {sorted(allowed_levels)}."
+            )
+        return value
+
+    @field_validator("log_file")
+    @classmethod
+    def normalize_log_file(cls, v: str | None) -> str | None:
+        """Collapse blank file paths to None."""
+        if v is None:
+            return None
+        value = v.strip()
+        return value or None
 
 
 class DatabaseSettings(BaseSettings):
     """Database configuration read from .env."""
 
-    model_config = SettingsConfigDict(env_prefix="DATABASE_", case_sensitive=False, extra="ignore")
+    model_config = _model_config("DATABASE_")
 
     url: str = Field(
         default="sqlite:///./cardealer.db",
@@ -127,7 +158,7 @@ class DatabaseSettings(BaseSettings):
 class SessionSettings(BaseSettings):
     """Session configuration read from .env."""
 
-    model_config = SettingsConfigDict(env_prefix="SESSION_", case_sensitive=False, extra="ignore")
+    model_config = _model_config("SESSION_")
 
     ttl_seconds: int = Field(
         default=3600,
@@ -154,6 +185,7 @@ class Settings:
             f"Settings("
             f"provider={self.llm_settings.provider}, "
             f"model={self.llm_settings.model}, "
-            f"env={self.app_settings.env}"
+            f"env={self.app_settings.env}, "
+            f"log_level={self.app_settings.log_level}"
             f")"
         )

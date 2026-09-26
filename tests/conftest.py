@@ -28,13 +28,14 @@ from tests.fakes import (
     StubCarRepository,
     StubDealerRepository,
     StubScheduleRepository,
+    make_test_settings,
 )
 
 
 @pytest.fixture(scope="session")
 def test_settings() -> Settings:
     """Get test settings from .env."""
-    return Settings()
+    return make_test_settings()
 
 
 @pytest.fixture(scope="session")
@@ -43,7 +44,7 @@ def test_database(test_settings: Settings) -> Database:
     # Use in-memory SQLite for testing
     from config.settings import DatabaseSettings
 
-    db_settings = DatabaseSettings(url="sqlite:///:memory:")
+    db_settings = DatabaseSettings(_env_file=None, url="sqlite:///:memory:")
     db = Database(db_settings)
     db.init_schema(Base.metadata)
     return db

@@ -70,8 +70,14 @@ packages = [
 
 # `scripts` is a plain script directory and is deliberately NOT shipped.
 [tool.hatch.build.targets.sdist]
-include = ["src", "tests", "data", "scripts", "pyproject.toml", ".env.example"]
-exclude = ["**/__pycache__", "**/*.pyc"]
+include = ["src", "tests", "data", "scripts", "pyproject.toml", ".env.example", "README.md", "LICENSE"]
+exclude = [
+    "**/__pycache__",
+    "**/*.pyc",
+    "**/.mypy_cache/**",
+    "**/.pytest_cache/**",
+    "**/.ruff_cache/**",
+]
 
 # --- tests -------------------------------------------------------------------
 

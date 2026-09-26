@@ -15,7 +15,7 @@ class TestLLMSettings:
         llm = test_settings.llm_settings
         assert llm.provider == "openai_compatible"
         assert llm.api_key.startswith("sk-")
-        assert llm.model == "gpt-4o-mini"
+        assert llm.model
         assert llm.temperature == 0.0
 
     def test_invalid_provider(self) -> None:
@@ -67,7 +67,7 @@ class TestAppSettings:
     def test_valid_app_settings(self, test_settings: Settings) -> None:
         """Test that app settings load correctly."""
         app = test_settings.app_settings
-        assert app.env in ["development", "production"]
+        assert app.env
         assert app.host
         assert app.port > 0
 

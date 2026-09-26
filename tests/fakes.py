@@ -368,7 +368,14 @@ def make_test_settings(database_url: str = "sqlite:///:memory:") -> Settings:
         timeout_seconds=5,
         max_retries=0,
     )
-    settings.app_settings = AppSettings(_env_file=None, env="test", host="127.0.0.1", port=8000)
+    settings.app_settings = AppSettings(
+        _env_file=None,
+        env="test",
+        host="127.0.0.1",
+        port=8000,
+        log_level="INFO",
+        log_file=None,
+    )
     settings.database_settings = DatabaseSettings(_env_file=None, url=database_url, echo=False)
     settings.session_settings = SessionSettings(_env_file=None, ttl_seconds=3600)
     return settings
