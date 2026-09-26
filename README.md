@@ -341,6 +341,46 @@ API, Streamlit, repositories, and LLM adapter.
 - LLM failures degrade to deterministic fallbacks
 - repository and session failures are logged with stable user-facing responses
 
+## Assumptions and Design Decisions
+
+Assumptions made for the assignment:
+
+- **No real booking.** Scheduling a call writes a local record (SQLite table
+  `schedule`) and confirms it; nothing is sent to an external booking service,
+  as the brief states none is needed.
+- **Catalog data is authoritative.** The chatbot never invents cars, dealers,
+  prices or phone numbers. Anything the LLM says about catalog facts is
+  grounded in repository results; unknown vehicles are refused rather than
+  hallucinated.
+- **Confirmation content.** Every booking confirmation carries the dealer's
+  name, phone number and the chosen slot, matching the brief's example
+  conversation. If the dealer row is missing or the lookup fails, the
+  confirmation degrades to the slot alone instead of failing the booking.
+- **Times are UTC-first.** A requested slot is stored in UTC with the user's
+  stated zone kept alongside it. Ambiguous times ("Friday at 3") are clarified,
+  never guessed; past times are refused.
+- **Session memory is conversational only.** Seen cars, the selected car/dealer
+  and workflow state live in an in-memory store with a TTL. This is deliberately
+  not persistent user accounts — the brief scopes the assignment to one
+  conversation.
+- **Deterministic fixtures.** The CSV data is randomly generated but seeded, so
+  every test and example in this README is reproducible.
+
+Design decisions worth calling out:
+
+- **The LLM interprets, the workflow decides.** Intent/entity extraction and
+  response wording go through `LLMPort`; what the system may do next is
+  enforced by a small state machine, so LLM failures cannot corrupt state.
+- **Clean architecture boundaries.** `domain` has no framework imports,
+  `application` depends only on `ports`, and `infrastructure` adapts the
+  outside world (SQLite, OpenAI-compatible endpoints). Import rules are
+  enforced by a test (`tests/unit/test_import_boundaries.py`).
+- **Provider-agnostic LLM adapter.** Any OpenAI-wire-compatible endpoint works
+  (hosted or local), configured entirely through `.env`.
+- **Both wording paths.** Replies are LLM-worded where possible and fall back
+  to deterministic templates on provider failure, so the assistant keeps
+  working during an outage.
+
 ## How This Answers the Project Brief
 
 The direct, numbered response to the attached project brief is documented in

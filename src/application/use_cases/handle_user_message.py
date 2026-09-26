@@ -186,7 +186,7 @@ class HandleUserMessageUseCase:
         self.select_task = SelectTaskUseCase(llm)
         self.lookup_car = LookupCarUseCase(llm, car_repo, dealer_repo)
         self.get_dealer_details = GetDealerDetailsUseCase(dealer_repo)
-        self.schedule_call = ScheduleCallUseCase(llm, schedule_repo)
+        self.schedule_call = ScheduleCallUseCase(llm, schedule_repo, dealer_repo)
 
     def execute(self, request: ChatRequest) -> ChatResponse:
         """Handle a user message and return a response.

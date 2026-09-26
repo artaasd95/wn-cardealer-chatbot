@@ -10,7 +10,8 @@ Orchestrates the scheduling workflow, plan steps 1-9:
 5. validate through the domain entity (past times are rejected before any
    persistence)
 6. build the ScheduleRecord, persist it through the ScheduleRepository port
-7. word the confirmation through LLMPort (deterministic fallback on failure)
+7. word the confirmation through LLMPort (deterministic fallback on failure),
+   carrying the dealer's name, phone number and the chosen slot
 
 No real external booking is made: the record is stored locally only.
 """
@@ -36,6 +37,7 @@ from models.inputs.response import ResponseWording
 from models.inputs.schedule import ScheduleExtraction, SchedulingContext
 from models.outputs.schedule import ScheduleOutcome, ScheduleRecord
 from ports.llm import LLMPort
+from ports.repositories.dealer_repository import DealerRepository
 from ports.repositories.schedule_repository import ScheduleRepository
 
 logger = logging.getLogger(__name__)
@@ -48,6 +50,7 @@ class ScheduleCallUseCase:
         self,
         llm: LLMPort,
         schedule_repo: ScheduleRepository | None = None,
+        dealer_repo: DealerRepository | None = None,
     ) -> None:
         """Initialize with dependencies.
 
@@ -56,9 +59,13 @@ class ScheduleCallUseCase:
             schedule_repo: Repository used to persist the created schedule.
                 When None the schedule is built but not stored (the plan's
                 "no real booking" path used by isolated tests).
+            dealer_repo: Repository used to resolve the dealer's name and
+                phone number for the confirmation. When None the confirmation
+                degrades to the slot alone.
         """
         self.llm = llm
         self.schedule_repo = schedule_repo
+        self.dealer_repo = dealer_repo
 
     def execute(
         self,
@@ -213,9 +220,14 @@ class ScheduleCallUseCase:
         else:
             logger.warning("no schedule repository wired; schedule not persisted")
 
-        # Step 7: confirmation wording via LLMPort (DTO → prompt → text)
+        # Step 7: confirmation wording via LLMPort (DTO → prompt → text).
+        # The brief requires the confirmation to carry the dealer's name, phone
+        # number and the chosen slot, so the contact pair is resolved here.
+        dealer_name, phone = self._dealer_contact(dealer_id)
         confirmation = ScheduleConfirmation(
             dealer_id=record.dealer_id,
+            dealer_name=dealer_name,
+            phone=phone,
             car_id=record.car_id,
             scheduled_for=record.scheduled_for,
             timezone=record.timezone,
@@ -231,6 +243,30 @@ class ScheduleCallUseCase:
             ScheduleCallWorkflow.advance(schedule_created=True),
         )
 
+    def _dealer_contact(self, dealer_id: str) -> tuple[str, str]:
+        """Resolve the dealer's name and phone number for the confirmation.
+
+        Args:
+            dealer_id: The selected dealer's identifier.
+
+        Returns:
+            Tuple of (dealer name, phone). Both are empty strings when no
+            dealer repository is wired, the row is missing, or the lookup
+            fails — a lookup problem never fails a booking that already
+            succeeded, the confirmation just degrades to the slot alone.
+        """
+        if self.dealer_repo is None:
+            return "", ""
+        try:
+            dealer = self.dealer_repo.get_by_id(dealer_id)
+        except Exception as exc:
+            logger.warning("dealer lookup failed for confirmation: %s", exc)
+            return "", ""
+        if dealer is None:
+            logger.warning("dealer %s not found for confirmation", dealer_id)
+            return "", ""
+        return dealer.dealer_name, dealer.phone
+
     def _word_confirmation(self, confirmation: ScheduleConfirmation) -> str:
         """Word a scheduling confirmation through the LLM.
 
@@ -242,13 +278,16 @@ class ScheduleCallUseCase:
             when the provider fails or returns nothing.
         """
         data_summary = (
+            f"dealer name: {confirmation.dealer_name or 'unknown'}; "
+            f"dealer phone: {confirmation.phone or 'unknown'}; "
             f"dealer id: {confirmation.dealer_id}; car id: {confirmation.car_id}; "
             f"date and time: {confirmation.scheduled_for.isoformat()} UTC; "
             f"local time zone: {confirmation.timezone}; status: {confirmation.status}"
         )
         prompt = build_response_prompt(
             task_summary=(
-                "The user's call has been scheduled. Confirm it and say exactly when it happens."
+                "The user's call has been scheduled. Confirm it with the dealer's "
+                "name and phone number and say exactly when it happens."
             ),
             data_summary=data_summary,
         )
@@ -257,7 +296,12 @@ class ScheduleCallUseCase:
             return worded
 
         when = confirmation.scheduled_for.strftime("%A, %B %d, %Y at %H:%M UTC")
+        dealer_part = ""
+        if confirmation.dealer_name:
+            phone = f" ({confirmation.phone})" if confirmation.phone else ""
+            dealer_part = f" with {confirmation.dealer_name}{phone}"
         return (
             f"Your call is booked for {when} "
-            f"({confirmation.timezone} local time). Anything else I can help with?"
+            f"({confirmation.timezone} local time){dealer_part}. "
+            "The dealer will call you then. Anything else I can help with?"
         )

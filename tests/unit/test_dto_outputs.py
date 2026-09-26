@@ -275,12 +275,16 @@ class TestScheduleConfirmation:
         scheduled_time = datetime(2024, 12, 26, 15, 0, 0)
         confirm = ScheduleConfirmation(
             dealer_id="D-001",
+            dealer_name="AutoNation Motors",
+            phone="+91-22-2204-1001",
             car_id="C-001",
             scheduled_for=scheduled_time,
             timezone="America/New_York",
             status="confirmed",
         )
         assert confirm.dealer_id == "D-001"
+        assert confirm.dealer_name == "AutoNation Motors"
+        assert confirm.phone == "+91-22-2204-1001"
         assert confirm.car_id == "C-001"
         assert confirm.scheduled_for == scheduled_time
         assert confirm.timezone == "America/New_York"
@@ -291,11 +295,26 @@ class TestScheduleConfirmation:
         scheduled_time = datetime(2024, 12, 26, 15, 0, 0)
         confirm = ScheduleConfirmation(
             dealer_id="D-001",
+            dealer_name="AutoNation Motors",
+            phone="+91-22-2204-1001",
             car_id="C-001",
             scheduled_for=scheduled_time,
             timezone="UTC",
         )
         assert confirm.status == "confirmed"
+
+    def test_unknown_dealer_degrades_to_empty_contact(self):
+        """A missing dealer row keeps the DTO valid with empty contact fields."""
+        confirm = ScheduleConfirmation(
+            dealer_id="D-999",
+            dealer_name="",
+            phone="",
+            car_id="C-001",
+            scheduled_for=datetime(2024, 12, 26, 15, 0, 0),
+            timezone="UTC",
+        )
+        assert confirm.dealer_name == ""
+        assert confirm.phone == ""
 
 
 class TestSessionSnapshot:

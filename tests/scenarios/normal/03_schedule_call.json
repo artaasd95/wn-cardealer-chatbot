@@ -31,7 +31,9 @@
           "reply": {
             "all_of": [
               {"regex": "(book|schedul|confirm|appointment)"},
-              {"regex": "(2030|May 15|15:00|3:00)"}
+              {"regex": "(2030|May 15|15:00|3:00)"},
+              {"regex": "(?i)prestige cars"},
+              {"regex": "2552\\D{0,2}1003"}
             ],
             "must_not": [{"regex": "(could not|error|failed)"}]
           },

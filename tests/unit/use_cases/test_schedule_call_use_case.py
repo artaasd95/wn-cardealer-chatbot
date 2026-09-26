@@ -16,7 +16,9 @@ from domain.enums.workflow_state import WorkflowState
 from domain.exceptions import DomainError
 from tests.fakes import (
     FakeLLM,
+    StubDealerRepository,
     StubScheduleRepository,
+    make_dealer,
     now_utc,
     schedule_extraction,
     wording_reply,
@@ -56,16 +58,40 @@ class TestScheduleCallUseCaseCreated:
     def test_empty_llm_wording_falls_back_to_deterministic_confirmation(
         self, fake_llm: FakeLLM
     ) -> None:
-        """Failure branch: a dead provider still produces a usable confirmation."""
+        """Failure branch: a dead provider still produces a usable confirmation.
+
+        The fallback carries the dealer's name, phone number and the chosen
+        slot, as the assignment brief requires of every confirmation.
+        """
         fake_llm.enqueue(schedule_extraction(FUTURE_DATE, "15:00", "UTC"))
         fake_llm.enqueue(wording_reply(""))
 
-        outcome, _ = ScheduleCallUseCase(fake_llm, StubScheduleRepository()).execute(
-            "2030-05-15 at 3pm", "D-003", "C-0003", "sess-1"
-        )
+        outcome, _ = ScheduleCallUseCase(
+            fake_llm,
+            StubScheduleRepository(),
+            StubDealerRepository(by_id={"D-003": make_dealer()}),
+        ).execute("2030-05-15 at 3pm", "D-003", "C-0003", "sess-1")
 
         assert outcome.status == "created"
         assert outcome.reply.startswith("Your call is booked for")
+        assert "Prestige Cars" in outcome.reply
+        assert "+91-80-2552-1003" in outcome.reply
+
+    def test_fallback_degrades_when_dealer_lookup_fails(self, fake_llm: FakeLLM) -> None:
+        """A dealer lookup failure never fails the booking; only the wording thins out."""
+        fake_llm.enqueue(schedule_extraction(FUTURE_DATE, "15:00", "UTC"))
+        fake_llm.enqueue(wording_reply(""))
+
+        outcome, _ = ScheduleCallUseCase(
+            fake_llm,
+            StubScheduleRepository(),
+            StubDealerRepository(error=DomainError("dealer db down")),
+        ).execute("2030-05-15 at 3pm", "D-003", "C-0003", "sess-1")
+
+        assert outcome.status == "created"
+        assert outcome.reply.startswith("Your call is booked for")
+        assert "15:00" in outcome.reply
+        assert "Prestige Cars" not in outcome.reply
 
     def test_no_repository_still_builds_schedule(self, fake_llm: FakeLLM) -> None:
         """Plan path: with no repository wired the call is built, not stored."""

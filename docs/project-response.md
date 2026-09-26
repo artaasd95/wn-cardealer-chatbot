@@ -27,7 +27,8 @@ The implemented flow follows the project brief:
 3. It returns the matching car and dealer when one row is confirmed.
 4. It offers the next actions: dealer details or schedule a call.
 5. Dealer details returns dealer contact information.
-6. Scheduling asks for a date/time if missing, then confirms the chosen slot.
+6. Scheduling asks for a date/time if missing, then confirms the chosen slot
+   together with the dealer's name and phone number.
 
 The flow is supported by a session-backed state machine so partial or ambiguous
 conversations still behave predictably.
@@ -160,8 +161,12 @@ Bot: Found BMW 3 Series 320i (2021) ... Would you like dealer details or to sche
 User: Schedule a call.
 Bot: What date and time work for you?
 User: 2030-05-15 at 3pm UTC.
-Bot: Your call is booked for Wednesday, May 15, 2030 at 15:00 UTC ...
+Bot: Your call is booked for Wednesday, May 15, 2030 at 15:00 UTC (UTC local
+     time) with Prestige Cars (+91-80-2552-1003). The dealer will call you then.
 ```
+
+Like the brief's sample dialog, the confirmation carries the dealer's name,
+phone number and the chosen slot.
 
 ## 8. Deliverables
 

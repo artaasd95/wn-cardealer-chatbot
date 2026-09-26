@@ -88,6 +88,9 @@ class TestFullTurnOverHttp:
 
         assert third["workflow_state"] == "SCHEDULE_CONFIRMED"
         assert third["reply"].startswith("Your call is booked for")
+        # Brief: the confirmation names the dealer and its phone number.
+        assert "Prestige Cars" in third["reply"]
+        assert "+91-80-2552-1003" in third["reply"]
         _assert_legal_step(second["workflow_state"], third["workflow_state"])
 
     def test_schedule_record_is_persisted(

@@ -17,6 +17,7 @@ from tests.fakes import (
     StubCarRepository,
     StubDealerRepository,
     StubScheduleRepository,
+    make_dealer,
     schedule_extraction,
     task_decision,
     wording_reply,
@@ -44,7 +45,7 @@ def _service(
         session_store,
         llm,
         StubCarRepository(),
-        StubDealerRepository(),
+        StubDealerRepository(by_id={"D-003": make_dealer()}),
         schedule_repo or StubScheduleRepository(),
     )
 
@@ -141,6 +142,9 @@ class TestScheduleCallTurnBranches:
         second = _schedule_turn(service, session_id, "tomorrow")
         assert second.workflow_state == "SCHEDULE_CONFIRMED"
         assert second.reply.startswith("Your call is booked for")
+        # Brief: the confirmation names the dealer and its phone number.
+        assert "Prestige Cars" in second.reply
+        assert "+91-80-2552-1003" in second.reply
 
     def test_ambiguous_time_clarifies(self, session_store: SessionStore) -> None:
         """Edge: an ambiguous time is clarified, never guessed."""

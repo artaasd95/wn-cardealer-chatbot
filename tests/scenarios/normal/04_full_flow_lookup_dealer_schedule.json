@@ -50,7 +50,14 @@
         "body": {
           "session_id": {"equals": "$session"},
           "workflow_state": {"equals": "SCHEDULE_CONFIRMED"},
-          "reply": {"all_of": [{"regex": "(book|schedul|confirm)"}], "must_not": [{"regex": "(could not|failed)"}]},
+          "reply": {
+            "all_of": [
+              {"regex": "(book|schedul|confirm)"},
+              {"regex": "(?i)prestige cars"},
+              {"regex": "2552\\D{0,2}1003"}
+            ],
+            "must_not": [{"regex": "(could not|failed)"}]
+          },
           "suggested_actions": {"equals": ["Find another car", "Get dealer details"]}
         }
       }
