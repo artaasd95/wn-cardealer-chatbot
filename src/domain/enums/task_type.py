@@ -1,0 +1,21 @@
+from __future__ import annotations
+
+from enum import Enum
+
+"""Task type enumeration for workflow routing."""
+
+
+class TaskType(str, Enum):
+    """Enumeration of recognized user intents."""
+
+    ITEM_LOOKUP = "ITEM_LOOKUP"
+    """User is searching for a car."""
+
+    DEALER_DETAILS = "DEALER_DETAILS"
+    """User wants details about a dealer."""
+
+    SCHEDULE_CALL = "SCHEDULE_CALL"
+    """User wants to schedule a call with a dealer."""
+
+    UNKNOWN = "UNKNOWN"
+    """Intent not recognized or insufficient confidence."""
