@@ -8,6 +8,7 @@ from __future__ import annotations
 import logging
 import os
 import uuid
+import time
 from urllib.parse import urlunsplit
 
 import requests
@@ -20,6 +21,12 @@ _app_settings = AppSettings()
 configure_logging(level=_app_settings.log_level, log_file=_app_settings.log_file)
 
 logger = logging.getLogger(__name__)
+
+# Use a requests Session that ignores system proxy environment variables so
+# the UI connects directly to the local API even when a dev machine has a
+# proxy (for example a local debugging proxy) configured.
+_requests_session = requests.Session()
+_requests_session.trust_env = False
 
 # Configure Streamlit page
 st.set_page_config(
@@ -86,12 +93,24 @@ def check_api_health() -> bool:
     Returns:
         True if API is accessible, False otherwise.
     """
-    try:
-        response = requests.get(f"{API_BASE_URL}/api/health", timeout=2)
-        return response.status_code == 200
-    except Exception as e:
-        logger.error(f"Failed to connect to API: {str(e)}")
-        return False
+    max_attempts = 6
+    timeout = 2
+    delay = 0.5
+    for attempt in range(1, max_attempts + 1):
+        try:
+            response = _requests_session.get(f"{API_BASE_URL}/api/health", timeout=timeout)
+            if response.status_code == 200:
+                return True
+            logger.debug("API health returned status %s", response.status_code)
+        except Exception as e:
+            logger.debug("API health check attempt %d/%d failed: %s", attempt, max_attempts, e)
+
+        if attempt < max_attempts:
+            time.sleep(delay)
+            delay = min(delay * 2, 5)
+
+    logger.error("Failed to connect to API after %d attempts", max_attempts)
+    return False
 
 
 def send_message(user_input: str) -> tuple[str, str, list[str]]:
@@ -105,14 +124,15 @@ def send_message(user_input: str) -> tuple[str, str, list[str]]:
         actions list is empty.
     """
     try:
-        response = requests.post(
+        # Increase timeout to allow the backend to complete LLM-backed turns
+        response = _requests_session.post(
             f"{API_BASE_URL}/api/chat",
             json={
                 "session_id": st.session_state.session_id,
                 "message": user_input,
                 "user_id": None,
             },
-            timeout=10,
+            timeout=35,
         )
 
         if response.status_code == 200:
@@ -120,13 +140,20 @@ def send_message(user_input: str) -> tuple[str, str, list[str]]:
             actions = data.get("suggested_actions") or []
             return data["reply"], data["workflow_state"], list(actions)
 
-        error_detail = response.json().get("detail", "Unknown error")
+        try:
+            error_detail = response.json().get("detail", "Unknown error")
+        except Exception:
+            error_detail = response.text or "Unknown error"
         return f"Error: {error_detail}", "ERROR", []
 
     except requests.exceptions.ConnectionError:
         return "Unable to connect to API. Is the server running?", "ERROR", []
     except requests.exceptions.Timeout:
-        return "API request timed out. Please try again.", "ERROR", []
+        return (
+            "API request timed out. The backend may be busy — please wait a moment and try again.",
+            "ERROR",
+            [],
+        )
     except Exception as e:
         logger.error(f"Failed to send message: {str(e)}")
         return f"Error: {str(e)}", "ERROR", []
@@ -135,7 +162,7 @@ def send_message(user_input: str) -> tuple[str, str, list[str]]:
 def reset_session() -> None:
     """Reset the current session."""
     try:
-        requests.delete(f"{API_BASE_URL}/api/sessions/{st.session_state.session_id}")
+        _requests_session.delete(f"{API_BASE_URL}/api/sessions/{st.session_state.session_id}")
         st.session_state.session_id = str(uuid.uuid4())
         st.session_state.messages = []
         st.session_state.workflow_state = "START"
