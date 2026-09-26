@@ -8,6 +8,7 @@ DELETE /sessions/{session_id} - delete session
 from __future__ import annotations
 
 import logging
+from time import perf_counter
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
@@ -39,8 +40,11 @@ async def handle_chat(
     Raises:
         HTTPException: On validation or domain errors.
     """
+    started_at = perf_counter()
     try:
         response = deps.chat_service.chat(request)
+        elapsed_ms = (perf_counter() - started_at) * 1000
+        logger.info("/api/chat completed in %.0fms for session %s", elapsed_ms, response.session_id)
         return response
 
     except DomainError as e:
@@ -48,6 +52,8 @@ async def handle_chat(
         raise domain_error_to_http(e) from e
 
     except Exception as e:
+        elapsed_ms = (perf_counter() - started_at) * 1000
+        logger.error("/api/chat failed in %.0fms: %s", elapsed_ms, str(e))
         logger.error(f"Unexpected error in /chat: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

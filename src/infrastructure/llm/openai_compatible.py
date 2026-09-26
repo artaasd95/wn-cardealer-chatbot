@@ -13,6 +13,7 @@ The adapter handles:
 from __future__ import annotations
 
 import logging
+from time import perf_counter
 from typing import Any, TypeVar, cast
 
 from openai import APIConnectionError, APIStatusError, APITimeoutError, OpenAI
@@ -94,6 +95,7 @@ class OpenAICompatibleClient(LLMPort):
             Never. On unrecoverable failure, logs the error and returns
             a fallback instance of output_type (all fields at their default).
         """
+        started_at = perf_counter()
         try:
             schema = output_type.model_json_schema()
 
@@ -125,28 +127,42 @@ class OpenAICompatibleClient(LLMPort):
 
             try:
                 content = response.choices[0].message.content or ""
-                return output_type.model_validate_json(content)
+                parsed = output_type.model_validate_json(content)
+                elapsed_ms = (perf_counter() - started_at) * 1000
+                logger.info("LLM completion %s finished in %.0fms", output_type.__name__, elapsed_ms)
+                return parsed
             except ValidationError as e:
+                elapsed_ms = (perf_counter() - started_at) * 1000
                 logger.warning(
-                    f"LLM response failed validation against schema {output_type.__name__}: {str(e)}. "
+                    f"LLM response failed validation against schema {output_type.__name__} after {elapsed_ms:.0f}ms: {str(e)}. "
                     "Returning fallback."
                 )
                 return self._fallback(output_type)
 
         except APITimeoutError:
+            elapsed_ms = (perf_counter() - started_at) * 1000
             logger.warning(
-                f"LLM request timed out after {self.settings.timeout_seconds}s. Returning fallback."
+                f"LLM request timed out after {elapsed_ms:.0f}ms (timeout {self.settings.timeout_seconds}s). Returning fallback."
             )
             return self._fallback(output_type)
 
         except APIConnectionError as e:
-            logger.warning(f"LLM connection failed: {str(e)}. Returning fallback.")
+            elapsed_ms = (perf_counter() - started_at) * 1000
+            logger.warning(
+                f"LLM connection failed after {elapsed_ms:.0f}ms: {str(e)}. Returning fallback."
+            )
             return self._fallback(output_type)
 
         except APIStatusError as e:
-            logger.warning(f"LLM provider error ({e.status_code}): {str(e)}. Returning fallback.")
+            elapsed_ms = (perf_counter() - started_at) * 1000
+            logger.warning(
+                f"LLM provider error ({e.status_code}) after {elapsed_ms:.0f}ms: {str(e)}. Returning fallback."
+            )
             return self._fallback(output_type)
 
         except Exception as e:
-            logger.error(f"Unexpected error in LLM completion: {str(e)}. Returning fallback.")
+            elapsed_ms = (perf_counter() - started_at) * 1000
+            logger.error(
+                f"Unexpected error in LLM completion after {elapsed_ms:.0f}ms: {str(e)}. Returning fallback."
+            )
             return self._fallback(output_type)

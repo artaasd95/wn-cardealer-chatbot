@@ -8,6 +8,7 @@ from __future__ import annotations
 import logging
 import os
 import uuid
+from urllib.parse import urlunsplit
 
 import requests
 import streamlit as st
@@ -28,8 +29,20 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# API base URL: secrets.toml if present, then the environment, then localhost.
-DEFAULT_API_BASE_URL = "http://localhost:8000"
+def _default_api_base_url() -> str:
+    """Build the default API origin from shared app settings.
+
+    Returns:
+        The local API base URL Streamlit should call by default.
+    """
+    host = _app_settings.host.strip() or "127.0.0.1"
+    if host in {"0.0.0.0", "::", "[::]"}:
+        host = "127.0.0.1"
+    return urlunsplit(("http", f"{host}:{_app_settings.port}", "", "", ""))
+
+
+# API base URL: environment first, then secrets.toml, then shared app settings.
+DEFAULT_API_BASE_URL = _default_api_base_url()
 
 
 def resolve_api_base_url() -> str:
@@ -178,7 +191,10 @@ def main() -> None:
             "⚠️ **API is not responding.** Make sure the FastAPI server is running on "
             f"{API_BASE_URL}"
         )
-        st.info("Start the server with: `uvicorn src.presentation.api.main:app --reload`")
+        st.info(
+            "Start the server with: "
+            f"`python -m uvicorn src.presentation.api.main:app --host {_app_settings.host} --port {_app_settings.port}`"
+        )
         return
 
     # Display message history
