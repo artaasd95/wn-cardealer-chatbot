@@ -22,9 +22,7 @@ pytestmark = pytest.mark.unit
 class TestLookupCarUseCase:
     """Steps 1-5 of the item lookup flow: extract, normalize, search, dealer."""
 
-    def test_found_with_dealer(
-        self, fake_llm: FakeLLM, stub_car_repo: StubCarRepository
-    ) -> None:
+    def test_found_with_dealer(self, fake_llm: FakeLLM, stub_car_repo: StubCarRepository) -> None:
         """Happy path: one match loads its dealer and can act immediately."""
         car = make_car("C-0003", dealer_id="D-003")
         dealer = make_dealer("D-003")
