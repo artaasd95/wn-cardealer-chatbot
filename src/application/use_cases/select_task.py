@@ -54,4 +54,10 @@ class SelectTaskUseCase:
             current_state,
         )
 
+        if routed_task == TaskType.UNKNOWN and current_state is WorkflowState.AWAITING_DATETIME:
+            logger.info(
+                "Routing UNKNOWN intent to SCHEDULE_CALL because the workflow is awaiting date/time"
+            )
+            return TaskType.SCHEDULE_CALL
+
         return routed_task

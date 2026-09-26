@@ -282,7 +282,18 @@ class HandleUserMessageUseCase:
             or None to use the state default).
         """
         try:
-            result, dealer, next_state = self.lookup_car.execute(user_message)
+            conversation_context: str | None = None
+            if WorkflowState(session.workflow_state) is WorkflowState.AWAITING_CAR:
+                recent_messages = session.conversation_history[-4:]
+                if recent_messages:
+                    conversation_context = "\n".join(
+                        f"{message.role}: {message.content}" for message in recent_messages
+                    )
+
+            result, dealer, next_state = self.lookup_car.execute(
+                user_message,
+                conversation_context,
+            )
 
             if result.status == "found":
                 car = result.cars[0]

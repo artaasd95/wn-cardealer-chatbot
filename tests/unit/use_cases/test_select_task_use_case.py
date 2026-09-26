@@ -71,3 +71,9 @@ class TestSelectTaskUseCase:
         assert SelectTaskUseCase(fake_llm).execute("anything", WorkflowState.START) == (
             TaskType.UNKNOWN
         )
+
+    def test_awaiting_datetime_unknown_continues_schedule(self, fake_llm: FakeLLM) -> None:
+        """An omitted-intent scheduling follow-up stays in the scheduling flow."""
+        assert SelectTaskUseCase(fake_llm).execute("at 3pm", WorkflowState.AWAITING_DATETIME) == (
+            TaskType.SCHEDULE_CALL
+        )

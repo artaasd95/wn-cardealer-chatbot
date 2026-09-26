@@ -47,18 +47,22 @@ class LookupCarUseCase:
         self.dealer_repo = dealer_repo
 
     def execute(
-        self, user_message: str
+        self,
+        user_message: str,
+        conversation_context: str | None = None,
     ) -> tuple[CarSearchResult, DealerRecord | None, WorkflowState]:
         """Execute car search.
 
         Args:
             user_message: The user's raw input.
+            conversation_context: Optional recent conversation to help resolve
+                a clarification turn.
 
         Returns:
             Tuple of (search result, selected dealer or None, next workflow state).
         """
         # Step 1: Extract car request via LLM (models/inputs contract, never a DTO)
-        prompt = build_car_extraction_prompt(user_message)
+        prompt = build_car_extraction_prompt(user_message, conversation_context)
         extraction = self.llm.structured_completion(prompt, CarExtraction)
 
         # Step 2: Normalize
