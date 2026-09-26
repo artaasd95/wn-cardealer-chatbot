@@ -152,9 +152,22 @@ CLI commands:
 - `/quit` exits the program
 
 ### 2. FastAPI API
+### 2. FastAPI API
 
-```bash
-uvicorn presentation.api.main:app --reload
+Start the backend first. When working from the repository (no install), the recommended command is:
+
+```powershell
+# Activate the venv (Windows PowerShell)
+.venv\Scripts\Activate
+
+# Run the API from the project sources (no install required)
+python -m uvicorn src.presentation.api.main:app --reload --host 127.0.0.1 --port 8001
+```
+
+If you installed the package (`pip install -e ".[dev]"`) you can run the installed module path instead:
+
+```powershell
+uvicorn presentation.api.main:app --reload --host 127.0.0.1 --port 8001
 ```
 
 Main endpoints:
@@ -165,26 +178,52 @@ Main endpoints:
 
 Interactive API docs:
 
-- <http://localhost:8000/docs>
+- <http://127.0.0.1:8001/docs>
 
-Example request:
+Example request (adjust host/port to match your `.env`):
 
-```bash
-curl -X POST http://localhost:8000/api/chat \
+```powershell
+curl -X POST http://127.0.0.1:8001/api/chat \
   -H "Content-Type: application/json" \
   -d '{"session_id": null, "message": "I want a BMW 3 Series 320i 2021"}'
 ```
 
 ### 3. Streamlit UI
 
-Start the API first, then launch Streamlit:
+Start the API first (see above), then run the Streamlit UI. From the repo root:
 
-```bash
+```powershell
 streamlit run src/presentation/streamlit/app.py
 ```
 
-The UI talks to the API only. It reads `API_BASE_URL` from the environment,
-then from Streamlit secrets, then falls back to `http://localhost:8000`.
+How the Streamlit app finds the API:
+
+1. `API_BASE_URL` environment variable (highest precedence)
+2. Streamlit `secrets.toml` (`st.secrets`)
+3. `APP_HOST` and `APP_PORT` from your `.env` (fallback)
+
+If the default port `8000` is already in use on your machine (for example by Docker Desktop), either:
+
+- set `API_BASE_URL` before launching Streamlit:
+
+```powershell
+$env:API_BASE_URL='http://127.0.0.1:8001'; streamlit run src/presentation/streamlit/app.py
+```
+
+- or copy and edit the `.env` file to change `APP_PORT` (for example to `8001`):
+
+```powershell
+copy .env.example .env
+# then edit .env and set APP_PORT=8001
+```
+
+Logs
+
+The API logs to stdout and — if `APP_LOG_FILE` is set in `.env` — to a rotating file. To follow the file on Windows PowerShell:
+
+```powershell
+Get-Content .\logs\api.log -Wait -Tail 20
+```
 
 ## Testing and Quality Checks
 
