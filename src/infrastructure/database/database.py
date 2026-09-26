@@ -20,6 +20,34 @@ from domain.exceptions import ConfigError
 logger = logging.getLogger(__name__)
 
 
+def _optional_str(value: str | None) -> str | None:
+    """CSV cell → stripped string, or None when blank."""
+    text = (value or "").strip()
+    return text or None
+
+
+def _optional_int(value: str | None) -> int | None:
+    """CSV cell → int, or None when blank or unreadable."""
+    text = (value or "").strip()
+    if not text:
+        return None
+    try:
+        return int(float(text))
+    except ValueError:
+        return None
+
+
+def _optional_float(value: str | None) -> float | None:
+    """CSV cell → float, or None when blank or unreadable."""
+    text = (value or "").strip()
+    if not text:
+        return None
+    try:
+        return float(text)
+    except ValueError:
+        return None
+
+
 class Database:
     """Database engine and session factory."""
 
@@ -84,8 +112,18 @@ class Database:
                     with open(dealers_csv, encoding="utf-8") as f:
                         reader = csv.DictReader(f)
                         for row in reader:
-                            dealer = Dealer(**row)
-                            session.add(dealer)
+                            session.add(
+                                Dealer(
+                                    dealer_id=row["dealer_id"],
+                                    dealer_name=row["dealer_name"],
+                                    city=_optional_str(row.get("city")),
+                                    state=_optional_str(row.get("state")),
+                                    address=_optional_str(row.get("address")),
+                                    phone=_optional_str(row.get("phone")),
+                                    email=_optional_str(row.get("email")),
+                                    rating=_optional_float(row.get("rating")),
+                                )
+                            )
                     session.commit()
                     logger.info(
                         f"Loaded {session.query(Dealer).count()} dealers from {dealers_csv}"
@@ -101,8 +139,23 @@ class Database:
                     with open(cars_csv, encoding="utf-8") as f:
                         reader = csv.DictReader(f)
                         for row in reader:
-                            car = Car(**row)
-                            session.add(car)
+                            session.add(
+                                Car(
+                                    car_id=row["car_id"],
+                                    make=row["make"],
+                                    model=row["model"],
+                                    variant=_optional_str(row.get("variant")),
+                                    year=_optional_int(row.get("year")),
+                                    fuel_type=_optional_str(row.get("fuel_type")),
+                                    transmission=_optional_str(row.get("transmission")),
+                                    body_type=_optional_str(row.get("body_type")),
+                                    price_min=_optional_int(row.get("price_min")),
+                                    price_max=_optional_int(row.get("price_max")),
+                                    mileage_km=_optional_int(row.get("mileage_km")),
+                                    features=_optional_str(row.get("features")),
+                                    dealer_id=row["dealer_id"],
+                                )
+                            )
                     session.commit()
                     logger.info(f"Loaded {session.query(Car).count()} cars from {cars_csv}")
                 except Exception as e:

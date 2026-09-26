@@ -13,11 +13,15 @@ from __future__ import annotations
 
 from typing import Protocol, TypeVar, runtime_checkable
 
-T = TypeVar("T")
+from pydantic import BaseModel
+
+# Every structured completion is asked for a pydantic schema, so the port's
+# type variable is bounded by BaseModel — exactly what the adapter needs.
+T = TypeVar("T", bound=BaseModel)
 
 
 @runtime_checkable
-class LLMPort(Protocol[T]):  # noqa: UP046
+class LLMPort(Protocol):
     """Protocol for structured LLM completions.
 
     Implementations of this port are responsible for:

@@ -13,7 +13,7 @@ The adapter handles:
 from __future__ import annotations
 
 import logging
-from typing import TypeVar
+from typing import Any, TypeVar, cast
 
 from openai import APIConnectionError, APIStatusError, APITimeoutError, OpenAI
 from pydantic import BaseModel, ValidationError
@@ -27,7 +27,7 @@ logger = logging.getLogger(__name__)
 T = TypeVar("T", bound=BaseModel)
 
 
-class OpenAICompatibleClient(LLMPort[T]):
+class OpenAICompatibleClient(LLMPort):
     """LLM adapter for OpenAI-compatible endpoints.
 
     Works with:
@@ -109,15 +109,23 @@ class OpenAICompatibleClient(LLMPort[T]):
                     },
                     {"role": "user", "content": prompt},
                 ],
-                response_format={
-                    "type": "json_schema",
-                    "json_schema": {"name": output_type.__name__, "schema": schema, "strict": True},
-                },
+                response_format=cast(
+                    "Any",
+                    {
+                        "type": "json_schema",
+                        "json_schema": {
+                            "name": output_type.__name__,
+                            "schema": schema,
+                            "strict": True,
+                        },
+                    },
+                ),
                 temperature=self.settings.temperature,
             )
 
             try:
-                return output_type.model_validate_json(response.choices[0].message.content)
+                content = response.choices[0].message.content or ""
+                return output_type.model_validate_json(content)
             except ValidationError as e:
                 logger.warning(
                     f"LLM response failed validation against schema {output_type.__name__}: {str(e)}. "

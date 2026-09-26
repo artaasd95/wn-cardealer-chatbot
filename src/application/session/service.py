@@ -259,7 +259,9 @@ class SessionService:
         record.updated_at = datetime.now(UTC)
         return record
 
-    def set_scheduling_context(self, record: SessionRecord, context: dict) -> SessionRecord:
+    def set_scheduling_context(
+        self, record: SessionRecord, context: dict[str, str | None]
+    ) -> SessionRecord:
         """Update the scheduling context.
 
         Args:

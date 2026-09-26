@@ -38,7 +38,7 @@ class InMemorySessionStore(SessionStore):
 
         record = self._sessions[session_id]
 
-        if datetime.now(UTC) > record.expires_at:
+        if record.expires_at is not None and datetime.now(UTC) > record.expires_at:
             del self._sessions[session_id]
             logger.info(f"Session {session_id} expired and removed")
             return None
@@ -114,7 +114,11 @@ class InMemorySessionStore(SessionStore):
             The count of sessions deleted.
         """
         now = datetime.now(UTC)
-        expired = [sid for sid, record in self._sessions.items() if now > record.expires_at]
+        expired = [
+            sid
+            for sid, record in self._sessions.items()
+            if record.expires_at is not None and now > record.expires_at
+        ]
 
         for sid in expired:
             del self._sessions[sid]

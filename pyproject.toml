@@ -155,6 +155,7 @@ files = ["src"]
 # instead of as installed-but-untyped distributions.
 mypy_path = "src"
 explicit_package_bases = true
+plugins = ["pydantic.mypy"]
 strict = true
 warn_unreachable = true
 show_error_codes = true

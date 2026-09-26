@@ -40,7 +40,7 @@ class SessionRecord(BaseModel):
         default_factory=list,
         description="Message history.",
     )
-    scheduling_context: dict = Field(
+    scheduling_context: dict[str, str | None] = Field(
         default_factory=dict,
         description="Scheduling context for call scheduling.",
     )
@@ -66,6 +66,6 @@ class SessionSnapshotRecord(BaseModel):
     selected_car_id: str | None
     selected_dealer_id: str | None
     conversation_history: list[MessageRecord]
-    scheduling_context: dict
+    scheduling_context: dict[str, str | None]
     user_id: str | None = None
     expires_at: datetime | None = None

@@ -9,8 +9,8 @@ The LLM provider is selected here and never changed during the process lifetime.
 
 from __future__ import annotations
 
-from pydantic import ConfigDict, Field, field_validator
-from pydantic_settings import BaseSettings
+from pydantic import Field, field_validator
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from domain.exceptions import ConfigError
 
@@ -32,7 +32,7 @@ class LLMSettings(BaseSettings):
     in .env. No code change needed.
     """
 
-    model_config = ConfigDict(
+    model_config = SettingsConfigDict(
         env_prefix="LLM_",
         case_sensitive=False,
         env_file=".env",
@@ -99,7 +99,7 @@ class LLMSettings(BaseSettings):
 class AppSettings(BaseSettings):
     """Application configuration read from .env."""
 
-    model_config = ConfigDict(env_prefix="APP_", case_sensitive=False, extra="ignore")
+    model_config = SettingsConfigDict(env_prefix="APP_", case_sensitive=False, extra="ignore")
 
     env: str = Field(
         default="development",
@@ -112,7 +112,7 @@ class AppSettings(BaseSettings):
 class DatabaseSettings(BaseSettings):
     """Database configuration read from .env."""
 
-    model_config = ConfigDict(env_prefix="DATABASE_", case_sensitive=False, extra="ignore")
+    model_config = SettingsConfigDict(env_prefix="DATABASE_", case_sensitive=False, extra="ignore")
 
     url: str = Field(
         default="sqlite:///./cardealer.db",
@@ -127,7 +127,7 @@ class DatabaseSettings(BaseSettings):
 class SessionSettings(BaseSettings):
     """Session configuration read from .env."""
 
-    model_config = ConfigDict(env_prefix="SESSION_", case_sensitive=False, extra="ignore")
+    model_config = SettingsConfigDict(env_prefix="SESSION_", case_sensitive=False, extra="ignore")
 
     ttl_seconds: int = Field(
         default=3600,

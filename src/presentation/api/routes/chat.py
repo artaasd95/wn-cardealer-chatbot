@@ -58,7 +58,7 @@ async def handle_chat(
 @router.get("/health")
 async def health_check(
     deps: AppDependencies = Depends(get_dependencies),
-) -> dict:
+) -> dict[str, str]:
     """Health check endpoint.
 
     Args:

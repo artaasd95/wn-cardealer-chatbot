@@ -4,7 +4,8 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from sqlalchemy import Column, DateTime, ForeignKey, String
+from sqlalchemy import DateTime, ForeignKey, String
+from sqlalchemy.orm import Mapped, mapped_column
 
 from infrastructure.database.tables.base import Base
 
@@ -14,15 +15,15 @@ class Schedule(Base):
 
     __tablename__ = "schedule"
 
-    schedule_id = Column(String, primary_key=True)
-    session_id = Column(String, ForeignKey("session.session_id"), nullable=False, index=True)
-    dealer_id = Column(String, ForeignKey("dealer.dealer_id"), nullable=False, index=True)
-    car_id = Column(String, ForeignKey("car.car_id"), nullable=False, index=True)
-    scheduled_for = Column(DateTime, nullable=False)
-    timezone = Column(String, nullable=True)
-    status = Column(String, nullable=False, default="pending")
-    created_at = Column(
-        DateTime, nullable=False, default=lambda: datetime.now(UTC).replace(tzinfo=None)
+    schedule_id: Mapped[str] = mapped_column(String, primary_key=True)
+    session_id: Mapped[str] = mapped_column(String, ForeignKey("session.session_id"), index=True)
+    dealer_id: Mapped[str] = mapped_column(String, ForeignKey("dealer.dealer_id"), index=True)
+    car_id: Mapped[str] = mapped_column(String, ForeignKey("car.car_id"), index=True)
+    scheduled_for: Mapped[datetime] = mapped_column(DateTime)
+    timezone: Mapped[str | None] = mapped_column(String, nullable=True)
+    status: Mapped[str] = mapped_column(String, default="pending")
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=lambda: datetime.now(UTC).replace(tzinfo=None)
     )
 
     def __repr__(self) -> str:

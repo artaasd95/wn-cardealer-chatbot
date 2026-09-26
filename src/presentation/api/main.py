@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import logging
 
-from fastapi import FastAPI, status
+from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
@@ -57,7 +57,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     # Add exception handlers
     @app.exception_handler(DomainError)
-    async def domain_error_handler(request, exc):
+    async def domain_error_handler(request: Request, exc: DomainError) -> JSONResponse:
         """Handle domain exceptions."""
         http_exc = domain_error_to_http(exc)
         return JSONResponse(
@@ -66,7 +66,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         )
 
     @app.exception_handler(Exception)
-    async def general_exception_handler(request, exc):
+    async def general_exception_handler(request: Request, exc: Exception) -> JSONResponse:
         """Handle unexpected exceptions."""
         logger.error(f"Unexpected exception: {str(exc)}")
         return JSONResponse(
@@ -79,7 +79,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     # Root endpoint
     @app.get("/")
-    async def root():
+    async def root() -> dict[str, str]:
         """Root endpoint."""
         return {
             "message": "Car Dealer Chatbot API",

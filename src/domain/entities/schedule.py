@@ -277,11 +277,11 @@ def _parse_date(text: str, today: date) -> tuple[date | None, str | None]:
         year = int(tokens[-1])
         tokens = tokens[:-1]
     if len(tokens) == 2:
-        first, second = tokens
-        if first in _MONTHS and re.fullmatch(r"\d{1,2}", second):
-            month, day = _MONTHS[first], int(second)
-        elif second in _MONTHS and re.fullmatch(r"\d{1,2}", first):
-            day, month = int(first), _MONTHS[second]
+        day_token, month_token = tokens
+        if day_token in _MONTHS and re.fullmatch(r"\d{1,2}", month_token):
+            month, day = _MONTHS[day_token], int(month_token)
+        elif month_token in _MONTHS and re.fullmatch(r"\d{1,2}", day_token):
+            day, month = int(day_token), _MONTHS[month_token]
         else:
             month = day = 0
         if month:
