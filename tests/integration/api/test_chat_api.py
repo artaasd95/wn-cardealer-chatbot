@@ -109,7 +109,9 @@ class TestFullTurnOverHttp:
         engine = create_engine(database_url)
         try:
             with engine.connect() as conn:
-                rows = conn.execute(text("SELECT dealer_id, car_id, status FROM schedule")).fetchall()
+                rows = conn.execute(
+                    text("SELECT dealer_id, car_id, status FROM schedule")
+                ).fetchall()
         finally:
             engine.dispose()
         assert len(rows) == 1

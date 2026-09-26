@@ -404,8 +404,7 @@ class HandleUserMessageUseCase:
         )
         worded = self.llm.structured_completion(prompt, ResponseWording).reply.strip()
         reply = worded or (
-            "I don't have enough context to answer that. "
-            "Would you like to search for a car?"
+            "I don't have enough context to answer that. Would you like to search for a car?"
         )
         return reply, state
 

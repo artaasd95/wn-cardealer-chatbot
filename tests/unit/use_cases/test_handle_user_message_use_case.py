@@ -320,7 +320,9 @@ class TestGreetingAndConversation:
         assert "BMW 3 Series" in conversation_prompt
         assert "what cars have I seen?" in conversation_prompt
 
-    def test_conversation_without_seen_cars_still_answers(self, session_store: SessionStore) -> None:
+    def test_conversation_without_seen_cars_still_answers(
+        self, session_store: SessionStore
+    ) -> None:
         """Conversation works before any car has been seen."""
         llm = FakeLLM()
         llm.enqueue(task_decision("CONVERSATION"))
@@ -371,9 +373,7 @@ class TestGreetingAndConversation:
         service.lookup_car.car_repo.result = CarSearchResult(
             status="multiple", cars=cars, candidates=cars
         )
-        second = service.execute(
-            ChatRequest(session_id=first.session_id, message="honda city")
-        )
+        second = service.execute(ChatRequest(session_id=first.session_id, message="honda city"))
 
         stored = session_store.get(second.session_id)
         assert stored is not None

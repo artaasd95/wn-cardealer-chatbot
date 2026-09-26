@@ -254,8 +254,7 @@ def load_scenarios(
             previous = seen_ids.get(scenario.scenario_id)
             if previous is not None:
                 raise ValueError(
-                    "duplicate scenario id "
-                    f"{scenario.scenario_id!r} in {previous} and {path}"
+                    f"duplicate scenario id {scenario.scenario_id!r} in {previous} and {path}"
                 )
             seen_ids[scenario.scenario_id] = path
             if scenario_filter and scenario_filter not in scenario.scenario_id:

@@ -125,9 +125,7 @@ class AppSettings(BaseSettings):
         value = v.strip().upper()
         allowed_levels = {"CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG", "NOTSET"}
         if value not in allowed_levels:
-            raise ValueError(
-                f"APP_LOG_LEVEL '{v}' must be one of {sorted(allowed_levels)}."
-            )
+            raise ValueError(f"APP_LOG_LEVEL '{v}' must be one of {sorted(allowed_levels)}.")
         return value
 
     @field_validator("log_file")

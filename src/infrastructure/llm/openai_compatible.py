@@ -129,7 +129,9 @@ class OpenAICompatibleClient(LLMPort):
                 content = response.choices[0].message.content or ""
                 parsed = output_type.model_validate_json(content)
                 elapsed_ms = (perf_counter() - started_at) * 1000
-                logger.info("LLM completion %s finished in %.0fms", output_type.__name__, elapsed_ms)
+                logger.info(
+                    "LLM completion %s finished in %.0fms", output_type.__name__, elapsed_ms
+                )
                 return parsed
             except ValidationError as e:
                 elapsed_ms = (perf_counter() - started_at) * 1000

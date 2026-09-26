@@ -36,6 +36,7 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
+
 def _default_api_base_url() -> str:
     """Build the default API origin from shared app settings.
 
