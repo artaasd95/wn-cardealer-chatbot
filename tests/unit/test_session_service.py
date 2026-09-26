@@ -159,3 +159,51 @@ class TestSessionService:
         session = service.set_scheduling_context(session, context)
 
         assert session.scheduling_context == context
+
+    def test_add_seen_car_appends(self, session_store: SessionStore) -> None:
+        """A newly seen car is recorded on the session."""
+        service = SessionService(session_store)
+        session = service.get_or_create(session_id=None)
+
+        session = service.add_seen_car(session, "C-1", "BMW", "3 Series", "320i", 2021)
+
+        assert len(session.seen_cars) == 1
+        assert session.seen_cars[0] == {
+            "car_id": "C-1",
+            "make": "BMW",
+            "model": "3 Series",
+            "variant": "320i",
+            "year": 2021,
+        }
+
+    def test_add_seen_car_deduplicates(self, session_store: SessionStore) -> None:
+        """The same car is not recorded twice."""
+        service = SessionService(session_store)
+        session = service.get_or_create(session_id=None)
+
+        session = service.add_seen_car(session, "C-1", "BMW", "3 Series", "320i", 2021)
+        session = service.add_seen_car(session, "C-1", "BMW", "3 Series", "320i", 2021)
+        session = service.add_seen_car(session, "C-2", "Honda", "City", None, 2020)
+
+        assert [c["car_id"] for c in session.seen_cars] == ["C-1", "C-2"]
+
+    def test_add_seen_car_persists(self, session_store: SessionStore) -> None:
+        """Seen cars survive the persist round trip."""
+        service = SessionService(session_store)
+        session = service.get_or_create(session_id=None)
+        session = service.add_seen_car(session, "C-1", "BMW", "3 Series", "320i", 2021)
+
+        service.persist(session)
+
+        stored = session_store.get(session.session_id)
+        assert stored is not None
+        assert stored.seen_cars == [
+            {"car_id": "C-1", "make": "BMW", "model": "3 Series", "variant": "320i", "year": 2021}
+        ]
+
+    def test_seen_cars_default_empty(self, session_store: SessionStore) -> None:
+        """A fresh session starts with no seen cars."""
+        service = SessionService(session_store)
+        session = service.get_or_create(session_id=None)
+
+        assert session.seen_cars == []

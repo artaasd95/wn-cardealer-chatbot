@@ -51,6 +51,7 @@ class InMemorySessionStore(SessionStore):
             selected_dealer_id=record.selected_dealer_id,
             conversation_history=record.conversation_history,
             scheduling_context=record.scheduling_context,
+            seen_cars=record.seen_cars,
             expires_at=record.expires_at,
         )
 

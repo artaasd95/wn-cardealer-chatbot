@@ -46,8 +46,8 @@ ports and contracts, never concrete frameworks or vendor SDK types.
 
 1. A user message arrives through the CLI or FastAPI.
 2. The session is loaded or created.
-3. The LLM classifies the intent into one of three tasks: item lookup, dealer
-   details, or schedule call.
+3. The LLM classifies the intent into one of five tasks: greeting, item
+   lookup, dealer details, schedule call, or conversation.
 4. The `TaskRouter` checks whether that task is legal from the current
    workflow state.
 5. The selected use case runs.
@@ -88,6 +88,32 @@ ports and contracts, never concrete frameworks or vendor SDK types.
   - invalid or past date/time: reject before persistence
 
 No real external booking is performed. Scheduling is local-only persistence.
+
+### 4. Greeting
+
+- Social openers (`hi`, `hello`, `good morning`) are classified as `GREETING`.
+- The bot replies with a short welcome and the current workflow state is left
+  untouched, so a greeting can arrive at any point in the conversation.
+
+### 5. Conversation
+
+- Contextual questions about the session ("what cars did I see?", "which is
+  cheaper?") are classified as `CONVERSATION`.
+- Every car shown during the session — single matches and disambiguation
+  candidates alike — is recorded in the session's `seen_cars` memory.
+- The prompt receives the conversation history, the seen-cars summary, and the
+  current workflow state, so the answer stays grounded in what the user has
+  actually been shown.
+- The workflow state is left untouched; the turn is purely informational.
+
+## Session Memory
+
+Beyond the workflow state and current selection, the session record carries:
+
+- `conversation_history`: the recent message transcript (capped)
+- `scheduling_context`: partially collected date/time across scheduling turns
+- `seen_cars`: compact records of every car displayed, so follow-up questions
+  and references to earlier options can be answered from memory
 
 ## Workflow State Machine
 
@@ -134,6 +160,14 @@ rows and adversarial rows.
 - `data/cars.csv`: 156 rows
 - `data/dealers.csv`: 14 rows
 - `data/aliases.csv`: 33 rows
+
+The CSV files are **seed fixtures, not the runtime data source**. On the first
+run `Database.init_schema()` copies them into the configured database
+(`DATABASE_URL`, SQLite by default). From then on every repository query goes
+through SQLAlchemy against the database — the CSVs are only read again when the
+tables are empty. `data/aliases.csv` is the single exception: the alias table is
+small and immutable, so the car repository loads it once at startup into
+memory.
 
 Seeded edge-case rows include:
 

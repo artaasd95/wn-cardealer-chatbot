@@ -26,6 +26,7 @@ from DTO.inputs.chat import ChatRequest
 from DTO.outputs.car import CarCandidateList, CarSummary
 from DTO.outputs.chat import ChatResponse, ClarificationMessage
 from DTO.outputs.dealer import DealerDetails
+from infrastructure.llm.prompts.conversation import build_conversation_prompt
 from infrastructure.llm.prompts.response import build_response_prompt
 from models.inputs.response import ResponseWording
 from models.outputs.car import CarRecord
@@ -212,7 +213,13 @@ class HandleUserMessageUseCase:
             next_state = current_state
             suggestions: list[str] | None = None
 
-            if task_type == TaskType.ITEM_LOOKUP:
+            if task_type == TaskType.GREETING:
+                reply, next_state = self._handle_greeting(session)
+
+            elif task_type == TaskType.CONVERSATION:
+                reply, next_state = self._handle_conversation(request.message, session)
+
+            elif task_type == TaskType.ITEM_LOOKUP:
                 reply, next_state, session, suggestions = self._handle_item_lookup(
                     request.message, session
                 )
@@ -225,8 +232,8 @@ class HandleUserMessageUseCase:
 
             else:
                 reply = (
-                    "I didn't understand that. Please try asking me to find a car, "
-                    "show dealer details, or schedule a call."
+                    "I didn't understand that. I can help you find a car, "
+                    "show dealer details, or schedule a call — just let me know!"
                 )
 
             # Step 5: Update session — walk the legal path to the target state
@@ -298,6 +305,9 @@ class HandleUserMessageUseCase:
             if result.status == "found":
                 car = result.cars[0]
                 session = self.session_service.set_selected_car(session, car.car_id)
+                session = self.session_service.add_seen_car(
+                    session, car.car_id, car.make, car.model, car.variant, car.year
+                )
                 if dealer:
                     session = self.session_service.set_selected_dealer(session, dealer.dealer_id)
 
@@ -315,6 +325,15 @@ class HandleUserMessageUseCase:
             if result.status == "multiple":
                 # Disambiguation branch: DTO candidates become clickable options.
                 candidates = [_car_summary(c) for c in (result.candidates or result.cars)]
+                for raw_car in result.candidates or result.cars:
+                    session = self.session_service.add_seen_car(
+                        session,
+                        raw_car.car_id,
+                        raw_car.make,
+                        raw_car.model,
+                        raw_car.variant,
+                        raw_car.year,
+                    )
                 options = CarCandidateList(
                     candidates=candidates,
                     message="Which of these did you mean?",
@@ -341,6 +360,54 @@ class HandleUserMessageUseCase:
         except Exception as e:
             logger.error(f"Item lookup failed: {str(e)}")
             return f"Car search failed: {str(e)}", WorkflowState.AWAITING_CAR, session, None
+
+    def _handle_greeting(self, session: SessionRecord) -> tuple[str, WorkflowState]:
+        """Return a friendly welcome; stay at the current workflow state."""
+        state = WorkflowState(session.workflow_state)
+        prompt = build_response_prompt(
+            task_summary="The user sent a greeting.",
+            data_summary=(
+                "Reply with a warm, brief welcome. "
+                "Mention you can help find cars, get dealer details, or schedule a call."
+            ),
+        )
+        worded = self.llm.structured_completion(prompt, ResponseWording).reply.strip()
+        reply = worded or (
+            "Hello! I'm your Car Dealer Assistant. "
+            "I can help you find a car, get dealer details, or schedule a call. How can I help?"
+        )
+        return reply, state
+
+    def _handle_conversation(
+        self, user_message: str, session: SessionRecord
+    ) -> tuple[str, WorkflowState]:
+        """Answer a contextual question using session history and seen cars."""
+        state = WorkflowState(session.workflow_state)
+
+        if session.seen_cars:
+            lines = []
+            for c in session.seen_cars:
+                variant = f" {c['variant']}" if c.get("variant") else ""
+                lines.append(f"- {c['make']} {c['model']}{variant} ({c.get('year', '?')})")
+            seen_summary = "\n".join(lines)
+        else:
+            seen_summary = ""
+
+        recent = session.conversation_history[-6:]
+        history_text = "\n".join(f"{m.role}: {m.content}" for m in recent)
+
+        prompt = build_conversation_prompt(
+            user_message=user_message,
+            conversation_history=history_text,
+            seen_cars_summary=seen_summary,
+            current_state=state.value,
+        )
+        worded = self.llm.structured_completion(prompt, ResponseWording).reply.strip()
+        reply = worded or (
+            "I don't have enough context to answer that. "
+            "Would you like to search for a car?"
+        )
+        return reply, state
 
     def _handle_dealer_details(self, session: SessionRecord) -> tuple[str, WorkflowState]:
         """Handle dealer details task.

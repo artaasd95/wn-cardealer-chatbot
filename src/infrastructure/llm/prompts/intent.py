@@ -20,25 +20,32 @@ def build_intent_prompt(user_message: str) -> str:
     Returns:
         The full prompt text sent to the LLM.
     """
-    return f"""You are a task router for a car dealer chatbot. 
-Your job is to classify the user's input into exactly one of three tasks:
+    return f"""You are a task router for a car dealer chatbot.
+Classify the user's input into exactly one of these tasks:
 
-1. ITEM_LOOKUP: The user wants to search for or identify a car.
-   Examples: "I'm looking for a BMW", "What cars do you have?", "Show me a red car"
+1. GREETING: A social greeting or casual opener with no task intent.
+   Examples: "hi", "hello", "good morning", "how are you", "hey there"
 
-2. DEALER_DETAILS: The user wants information about a specific dealer.
-   Examples: "Tell me about the dealer", "What's the dealer's phone number?", "Where is the dealer located?"
+2. ITEM_LOOKUP: The user wants to search for or find a specific car.
+   Examples: "I'm looking for a BMW", "What cars do you have?", "Show me a Honda Civic 2021"
 
-3. SCHEDULE_CALL: The user wants to schedule a call with the dealer.
+3. DEALER_DETAILS: The user wants information about a dealer.
+   Examples: "Tell me about the dealer", "What's the dealer's phone number?", "Where is the dealer?"
+
+4. SCHEDULE_CALL: The user wants to schedule a call with a dealer.
    Examples: "I want to book a time", "Can we schedule a call for tomorrow?", "When can I call?"
 
-4. UNKNOWN: The user's intent is unclear or not one of the above.
-   Examples: "What's the weather?", "Tell me a joke", unclear or ambiguous requests
+5. CONVERSATION: A contextual question about cars or dealers already seen, or advice about options.
+   Examples: "what cars did I see?", "which is cheaper?", "what do you suggest?",
+             "tell me more about that car", "compare those options", "what have we discussed?"
 
-Classify the following user message. Return your response as JSON with:
+6. UNKNOWN: Completely unrelated or ambiguous input.
+   Examples: "What's the weather?", "Tell me a joke"
+
+Classify this message. Return JSON with:
 - task_type: One of {[t.value for t in TaskType]}
-- confidence: A float between 0.0 and 1.0 (1.0 = certain)
-- reason: A brief explanation of your classification
+- confidence: Float 0.0–1.0 (1.0 = certain)
+- reason: Brief explanation
 
 User message: "{user_message}"
 

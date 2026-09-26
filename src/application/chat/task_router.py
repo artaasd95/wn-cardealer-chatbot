@@ -26,7 +26,13 @@ class TaskRouter:
     # guards can answer "pick a car first" when no selection exists, rather
     # than turning a valid intent into UNKNOWN. Success paths still walk the
     # legal path (AWAITING_ACTION → …) via advance_through.
+    # GREETING and CONVERSATION are allowed from every state because they
+    # are always valid conversational moves regardless of workflow position.
+    _ALL_STATES = set(WorkflowState)
+
     TASK_ENTRY_STATES = {
+        TaskType.GREETING: _ALL_STATES,
+        TaskType.CONVERSATION: _ALL_STATES,
         TaskType.ITEM_LOOKUP: {
             WorkflowState.START,
             WorkflowState.AWAITING_CAR,

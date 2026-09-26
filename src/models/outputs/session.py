@@ -44,6 +44,10 @@ class SessionRecord(BaseModel):
         default_factory=dict,
         description="Scheduling context for call scheduling.",
     )
+    seen_cars: list[dict[str, str | int | None]] = Field(
+        default_factory=list,
+        description="Compact records of cars shown to the user this session.",
+    )
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(UTC).replace(tzinfo=None),
         description="When session was created.",
@@ -67,5 +71,9 @@ class SessionSnapshotRecord(BaseModel):
     selected_dealer_id: str | None
     conversation_history: list[MessageRecord]
     scheduling_context: dict[str, str | None]
+    seen_cars: list[dict[str, str | int | None]] = Field(
+        default_factory=list,
+        description="Compact records of cars shown to the user this session.",
+    )
     user_id: str | None = None
     expires_at: datetime | None = None

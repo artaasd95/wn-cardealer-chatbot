@@ -6,6 +6,7 @@ creates all tables, and loads CSV fixtures on first run.
 
 from __future__ import annotations
 
+import contextlib
 import csv
 import logging
 from pathlib import Path
@@ -181,7 +182,5 @@ class Database:
 
     def __del__(self) -> None:
         """Best-effort cleanup for short-lived test instances."""
-        try:
+        with contextlib.suppress(Exception):
             self.close()
-        except Exception:
-            pass

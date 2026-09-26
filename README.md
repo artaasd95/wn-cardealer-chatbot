@@ -18,11 +18,16 @@ The project goes beyond the minimum CLI requirement and provides:
 
 The assistant follows the project brief's core conversation flow:
 
-1. ask or infer which car the user wants,
-2. look it up in generated CSV-backed data,
+1. greet the user and ask or infer which car they want,
+2. look it up in the seeded catalog database,
 3. return the matching car and dealer,
 4. offer dealer details or call scheduling,
 5. either show the dealer's information or confirm a requested time slot.
+
+Along the way the assistant keeps session memory: greetings are handled
+directly, contextual questions ("what cars did I see?", "which is cheaper?")
+are answered from the cars shown so far, and follow-up references to earlier
+options resolve against the same history.
 
 The LLM is used for intent extraction, entity extraction, and response wording.
 It does not control the workflow and it does not invent authoritative catalog
@@ -126,7 +131,8 @@ python scripts/generate_data.py --check
 ```
 
 The database loader imports these CSV files automatically when the schema is
-initialized and the tables are empty.
+initialized and the tables are empty. After that first seed, all runtime
+queries go through the database — the CSVs are never read per request.
 
 ## Running the Project
 

@@ -28,7 +28,7 @@ def configure_logging(level: str = "INFO", log_file: str | None = None) -> None:
     normalized_log_file = (log_file or "").strip() or None
     configuration = (normalized_level, normalized_log_file)
 
-    if _LAST_CONFIGURATION == configuration:
+    if configuration == _LAST_CONFIGURATION:
         return
 
     handlers: dict[str, dict[str, object]] = {

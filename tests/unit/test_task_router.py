@@ -90,3 +90,23 @@ class TestTaskRouter:
         )
         routed = TaskRouter.route(decision, WorkflowState.START)
         assert routed == TaskType.UNKNOWN
+
+    def test_route_greeting_allowed_from_every_state(self) -> None:
+        """GREETING is a valid move from any workflow state, including COMPLETE."""
+        decision = TaskDecision(
+            task_type=TaskType.GREETING.value,
+            confidence=0.95,
+            reason="User says hello",
+        )
+        for state in WorkflowState:
+            assert TaskRouter.route(decision, state) == TaskType.GREETING
+
+    def test_route_conversation_allowed_from_every_state(self) -> None:
+        """CONVERSATION is a valid move from any workflow state."""
+        decision = TaskDecision(
+            task_type=TaskType.CONVERSATION.value,
+            confidence=0.90,
+            reason="User asks about cars already seen",
+        )
+        for state in WorkflowState:
+            assert TaskRouter.route(decision, state) == TaskType.CONVERSATION

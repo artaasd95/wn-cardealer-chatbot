@@ -264,6 +264,122 @@ class TestHandleUserMessageBranches:
         assert stored.selected_car_id == "C-0058"
 
 
+class TestGreetingAndConversation:
+    """GREETING and CONVERSATION dispatch, and seen-cars memory."""
+
+    def test_greeting_returns_welcome_and_keeps_state(self, session_store: SessionStore) -> None:
+        """A greeting gets a welcome reply and does not move the workflow."""
+        llm = FakeLLM()
+        llm.enqueue(task_decision("GREETING"))
+        llm.enqueue(wording_reply("Hello! I can help you find a car."))
+
+        response = _service(
+            llm, session_store, StubCarRepository(), StubDealerRepository()
+        ).execute(ChatRequest(message="hi there", user_id="u-1"))
+
+        assert response.reply == "Hello! I can help you find a car."
+        assert response.workflow_state == "START"
+        assert response.suggested_actions == ["Find a car"]
+
+    def test_greeting_falls_back_when_llm_returns_empty(self, session_store: SessionStore) -> None:
+        """A dead provider still gets a useful welcome message."""
+        llm = FakeLLM()
+        llm.enqueue(task_decision("GREETING"))
+        # No wording queued: the fake returns ResponseWording() with empty reply.
+
+        response = _service(
+            llm, session_store, StubCarRepository(), StubDealerRepository()
+        ).execute(ChatRequest(message="hello"))
+
+        assert response.reply.startswith("Hello! I'm your Car Dealer Assistant.")
+        assert response.workflow_state == "START"
+
+    def test_conversation_lists_seen_cars(self, session_store: SessionStore) -> None:
+        """'What cars did I see?' is answered from the session's seen cars."""
+        llm = FakeLLM()
+        llm.enqueue(task_decision("ITEM_LOOKUP"))
+        llm.enqueue(CarExtraction(make="bmw", model="3 series", year_from=2021, year_to=2021))
+        llm.enqueue(task_decision("CONVERSATION"))
+        llm.enqueue(wording_reply("You've seen the BMW 3 Series 320i (2021)."))
+        car_repo = StubCarRepository(
+            CarSearchResult(status="found", cars=[make_car("C-0003")], candidates=[])
+        )
+        dealer_repo = StubDealerRepository(by_id={"D-003": make_dealer("D-003")})
+        service = _service(llm, session_store, car_repo, dealer_repo)
+
+        first = service.execute(ChatRequest(message="bmw 3 series 2021", user_id="u-1"))
+        second = service.execute(
+            ChatRequest(session_id=first.session_id, message="what cars have I seen?")
+        )
+
+        assert second.reply == "You've seen the BMW 3 Series 320i (2021)."
+        assert second.workflow_state == "AWAITING_ACTION"
+
+        # The conversation prompt must carry the seen-car summary.
+        conversation_prompt = llm.prompts[-1]
+        assert "BMW 3 Series" in conversation_prompt
+        assert "what cars have I seen?" in conversation_prompt
+
+    def test_conversation_without_seen_cars_still_answers(self, session_store: SessionStore) -> None:
+        """Conversation works before any car has been seen."""
+        llm = FakeLLM()
+        llm.enqueue(task_decision("CONVERSATION"))
+        llm.enqueue(wording_reply("We have not looked at any cars yet."))
+
+        response = _service(
+            llm, session_store, StubCarRepository(), StubDealerRepository()
+        ).execute(ChatRequest(message="what do you suggest?", user_id="u-1"))
+
+        assert response.reply == "We have not looked at any cars yet."
+        assert response.workflow_state == "START"
+
+    def test_conversation_uses_empty_context_when_llm_fails(
+        self, session_store: SessionStore
+    ) -> None:
+        """A dead provider degrades to a clear fallback for conversational turns."""
+        llm = RaisingLLM()
+
+        response = _service(
+            llm, session_store, StubCarRepository(), StubDealerRepository()
+        ).execute(ChatRequest(message="tell me more", user_id="u-1"))
+
+        assert response.reply == "An unexpected error occurred. Please try again."
+        assert response.workflow_state == "ERROR"
+
+    def test_seen_cars_tracked_on_found_and_multiple(self, session_store: SessionStore) -> None:
+        """Both 'found' and 'multiple' results record the cars shown to the user."""
+        llm = FakeLLM()
+        llm.enqueue(task_decision("ITEM_LOOKUP"))
+        llm.enqueue(CarExtraction(make="bmw", model="3 series"))
+        llm.enqueue(task_decision("ITEM_LOOKUP"))
+        llm.enqueue(CarExtraction(make="honda", model="city"))
+        service = _service(
+            llm,
+            session_store,
+            StubCarRepository(
+                CarSearchResult(status="found", cars=[make_car("C-0003")], candidates=[])
+            ),
+            StubDealerRepository(by_id={"D-003": make_dealer("D-003")}),
+        )
+
+        first = service.execute(ChatRequest(message="bmw 3 series", user_id="u-1"))
+
+        cars = [
+            make_car("C-0058", make="Honda", model="City", variant="V", year=2019),
+            make_car("C-0059", make="Honda", model="City", variant="SV", year=2020),
+        ]
+        service.lookup_car.car_repo.result = CarSearchResult(
+            status="multiple", cars=cars, candidates=cars
+        )
+        second = service.execute(
+            ChatRequest(session_id=first.session_id, message="honda city")
+        )
+
+        stored = session_store.get(second.session_id)
+        assert stored is not None
+        assert [c["car_id"] for c in stored.seen_cars] == ["C-0003", "C-0058", "C-0059"]
+
+
 class TestHandleUserMessageFailures:
     """Dead provider and unexpected failures degrade, never raise."""
 

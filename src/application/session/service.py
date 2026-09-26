@@ -71,6 +71,7 @@ class SessionService:
             selected_dealer_id=snapshot.selected_dealer_id,
             conversation_history=snapshot.conversation_history,
             scheduling_context=snapshot.scheduling_context,
+            seen_cars=snapshot.seen_cars,
             expires_at=snapshot.expires_at
             or (datetime.now(UTC) + timedelta(seconds=_DEFAULT_TTL_SECONDS)),
         )
@@ -273,4 +274,33 @@ class SessionService:
         """
         record.scheduling_context = context
         record.updated_at = datetime.now(UTC)
+        return record
+
+    def add_seen_car(
+        self,
+        record: SessionRecord,
+        car_id: str,
+        make: str,
+        model: str,
+        variant: str | None,
+        year: int | None,
+    ) -> SessionRecord:
+        """Append a car to the session's seen-cars list (deduplicates by car_id).
+
+        Args:
+            record: The current session record.
+            car_id: Unique car identifier.
+            make: Car make (e.g. Toyota).
+            model: Car model (e.g. Camry).
+            variant: Optional trim/variant string.
+            year: Model year.
+
+        Returns:
+            Updated SessionRecord.
+        """
+        if not any(c.get("car_id") == car_id for c in record.seen_cars):
+            record.seen_cars.append(
+                {"car_id": car_id, "make": make, "model": model, "variant": variant, "year": year}
+            )
+            record.updated_at = datetime.now(UTC)
         return record

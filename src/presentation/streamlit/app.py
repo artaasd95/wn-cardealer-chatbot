@@ -7,8 +7,8 @@ from __future__ import annotations
 
 import logging
 import os
-import uuid
 import time
+import uuid
 from urllib.parse import urlunsplit
 
 import requests
