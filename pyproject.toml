@@ -49,6 +49,8 @@ dev = [
     "pytest-cov>=6.0",
     "ruff>=0.7",
     "mypy>=1.13",
+    # TestClient (fastapi.testclient) transport
+    "httpx>=0.27",
 ]
 
 # src layout: the wheel ships the packages at top level, so imports read

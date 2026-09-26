@@ -11,13 +11,6 @@ import pytest
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 from config.settings import Settings
-from tests.fakes import (
-    FakeLLM,
-    RaisingLLM,
-    StubCarRepository,
-    StubDealerRepository,
-    StubScheduleRepository,
-)
 from infrastructure.database.database import Database
 from infrastructure.database.tables.base import Base
 from infrastructure.llm.factory import LLMClientFactory
@@ -29,6 +22,13 @@ from ports.llm import LLMPort
 from ports.repositories.car_repository import CarRepository
 from ports.repositories.dealer_repository import DealerRepository
 from ports.session_store import SessionStore
+from tests.fakes import (
+    FakeLLM,
+    RaisingLLM,
+    StubCarRepository,
+    StubDealerRepository,
+    StubScheduleRepository,
+)
 
 
 @pytest.fixture(scope="session")

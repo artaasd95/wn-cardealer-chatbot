@@ -15,9 +15,9 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
+from ports.llm import LLMPort
 from presentation.api.dependencies import AppDependencies
 from tests.fakes import FakeLLM, make_test_settings
-from ports.llm import LLMPort
 
 
 @pytest.fixture(autouse=True)
@@ -46,9 +46,7 @@ def database_url(tmp_path: Path) -> str:
 
 
 @pytest.fixture
-def build_app(
-    database_url: str, monkeypatch: pytest.MonkeyPatch
-) -> Callable[[LLMPort], FastAPI]:
+def build_app(database_url: str, monkeypatch: pytest.MonkeyPatch) -> Callable[[LLMPort], FastAPI]:
     """App factory wired to the real composition root with a fake LLM.
 
     Args:
