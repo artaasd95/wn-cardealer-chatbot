@@ -94,6 +94,11 @@ class DealerRepositoryImpl(DealerRepository):
     def _dealer_record(dealer: Dealer) -> DealerRecord:
         """Convert a Dealer ORM object to a DealerRecord DTO.
 
+        Incomplete rows still produce a usable record: a missing city, address,
+        phone or email becomes an empty string so the caller can show partial
+        details instead of crashing (plan: "incomplete dealer row → partial
+        details, never a crash").
+
         Args:
             dealer: SQLAlchemy Dealer instance.
 
@@ -103,10 +108,10 @@ class DealerRepositoryImpl(DealerRepository):
         return DealerRecord(
             dealer_id=dealer.dealer_id,
             dealer_name=dealer.dealer_name,
-            city=dealer.city,
+            city=dealer.city or "",
             state=dealer.state,
-            address=dealer.address,
-            phone=dealer.phone,
-            email=dealer.email,
+            address=dealer.address or "",
+            phone=dealer.phone or "",
+            email=dealer.email or "",
             rating=dealer.rating,
         )

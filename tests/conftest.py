@@ -11,6 +11,13 @@ import pytest
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 from config.settings import Settings
+from tests.fakes import (
+    FakeLLM,
+    RaisingLLM,
+    StubCarRepository,
+    StubDealerRepository,
+    StubScheduleRepository,
+)
 from infrastructure.database.database import Database
 from infrastructure.database.tables.base import Base
 from infrastructure.llm.factory import LLMClientFactory
@@ -71,3 +78,38 @@ def test_session_record(session_store: SessionStore) -> SessionRecord:
     """Create a test session record."""
     record = session_store.create(user_id="test-user")
     return record
+
+
+# ---------------------------------------------------------------------------
+# Fakes — the plan's "LLM port faked in every test" rule.
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def fake_llm() -> FakeLLM:
+    """Scripted LLMPort; queue responses per output schema."""
+    return FakeLLM()
+
+
+@pytest.fixture
+def failing_llm() -> RaisingLLM:
+    """LLMPort double that raises on every call (dead provider)."""
+    return RaisingLLM()
+
+
+@pytest.fixture
+def stub_car_repo() -> StubCarRepository:
+    """Car repository double returning scripted results."""
+    return StubCarRepository()
+
+
+@pytest.fixture
+def stub_dealer_repo() -> StubDealerRepository:
+    """Dealer repository double returning scripted records."""
+    return StubDealerRepository()
+
+
+@pytest.fixture
+def stub_schedule_repo() -> StubScheduleRepository:
+    """Schedule repository double recording saved schedules."""
+    return StubScheduleRepository()

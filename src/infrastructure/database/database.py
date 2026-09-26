@@ -19,6 +19,11 @@ from domain.exceptions import ConfigError
 
 logger = logging.getLogger(__name__)
 
+# Single source of truth for where the CSV fixtures live. Tests point this at
+# a temporary directory to exercise the missing / empty / malformed CSV edge
+# cases without touching the real fixtures.
+DATA_DIR = Path(__file__).resolve().parents[3] / "data"
+
 
 def _optional_str(value: str | None) -> str | None:
     """CSV cell → stripped string, or None when blank."""
@@ -96,7 +101,7 @@ class Database:
         from infrastructure.database.tables.car import Car
         from infrastructure.database.tables.dealer import Dealer
 
-        data_dir = Path(__file__).parent.parent.parent.parent / "data"
+        data_dir = DATA_DIR
 
         if not data_dir.exists():
             logger.info("data/ directory not found; skipping CSV load")
