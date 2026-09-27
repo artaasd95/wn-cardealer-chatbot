@@ -110,6 +110,15 @@
               },
               {
                 "regex": "Pick one"
+              },
+              {
+                "regex": "choose one"
+              },
+              {
+                "regex": "not sure"
+              },
+              {
+                "regex": "Which one"
               }
             ]
           },

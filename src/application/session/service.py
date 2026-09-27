@@ -203,19 +203,20 @@ class SessionService:
         idx: int | None = None
 
         # "option N", "option Nth", "pick N", "number N"
-        m = re.search(r"(?:option|pick|number|#)\s*(\d+|one|two|three|four|five|six|seven|eight|nine|ten|first|second|third|fourth|fifth)", text)
+        m = re.search(r"(?:option|pick|number|#)\s*\b(\d+|one|two|three|four|five|six|seven|eight|nine|ten|first|second|third|fourth|fifth)\b", text)
         if m:
             token = m.group(1)
             idx = _words.get(token) or (int(token) if token.isdigit() else None)
 
-        # "Nth option" / "N option"
+        # "Nth option" / "N option" — require word boundaries so that
+        # "A4" (Audi) is not mistaken for "pick 4".
         if idx is None:
-            m = re.search(r"(\d+|one|two|three|four|five|six|seven|eight|nine|ten|first|second|third|fourth|fifth)\s*(?:option|one)?", text)
+            m = re.search(r"\b(\d+|one|two|three|four|five|six|seven|eight|nine|ten|first|second|third|fourth|fifth)\b\s*(?:option|one)?\b", text)
             if m:
                 token = m.group(1)
                 idx = _words.get(token) or (int(token) if token.isdigit() else None)
 
-        # Bare number
+        # Bare number — only when the entire message is a single number.
         if idx is None and text.isdigit():
             idx = int(text)
 

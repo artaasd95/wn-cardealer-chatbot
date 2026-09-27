@@ -205,17 +205,25 @@ class HandleUserMessageUseCase:
             session = self.session_service.append_message(session, "user", request.message)
 
             # Step 2b: Check for disambiguation pick BEFORE intent classification.
-            # If we showed a list of cars and the user references one by position
-            # ("second option", "option 3", etc.), resolve it immediately.
-            candidate, _idx = self.session_service.resolve_disambiguation(
-                session, request.message
-            )
-            if candidate:
-                return self._handle_disambiguation_pick(candidate, session)
+            # But first — if the message is a question or vague reference,
+            # skip positional resolution so the bot answers / re-asks instead.
+            current_state = WorkflowState(session.workflow_state)
+            if (
+                current_state is WorkflowState.AWAITING_CAR
+                and session.pending_disambiguation
+                and self._is_vague_or_question(request.message)
+            ):
+                pass  # fall through to intent classification
+            else:
+                candidate, _idx = self.session_service.resolve_disambiguation(
+                    session, request.message
+                )
+                if candidate:
+                    return self._handle_disambiguation_pick(candidate, session)
 
             # Step 3: Select task — pass recent conversation history so the
             # LLM can interpret contextual requests like "show me dealer details"
-            current_state = WorkflowState(session.workflow_state)
+            # (current_state was already computed in step 2b above)
             recent_history = self._format_recent_history(session)
             task_type = self.select_task.execute(
                 request.message, current_state, recent_history
@@ -233,9 +241,24 @@ class HandleUserMessageUseCase:
                 reply, next_state = self._handle_conversation(request.message, session)
 
             elif task_type == TaskType.ITEM_LOOKUP:
-                reply, next_state, session, suggestions = self._handle_item_lookup(
-                    request.message, session
-                )
+                # When we are in AWAITING_CAR and still have pending
+                # disambiguation candidates, a vague reference ("that car",
+                # "go with that one") or a question about the listed cars
+                # ("what is the mileage on the first one?") should NOT be
+                # treated as a new car search.  Route to the conversation
+                # handler so the bot re-asks or answers contextually.
+                if (
+                    current_state is WorkflowState.AWAITING_CAR
+                    and session.pending_disambiguation
+                    and self._is_vague_or_question(request.message)
+                ):
+                    reply, next_state = self._handle_conversation(
+                        request.message, session
+                    )
+                else:
+                    reply, next_state, session, suggestions = self._handle_item_lookup(
+                        request.message, session
+                    )
 
             elif task_type == TaskType.DEALER_DETAILS:
                 reply, next_state = self._handle_dealer_details(session)
@@ -302,6 +325,16 @@ class HandleUserMessageUseCase:
             or None to use the state default).
         """
         try:
+            # If the user starts a fresh search while a disambiguation list
+            # is still pending, clear it so the conversation context fed to
+            # the car-extraction LLM doesn't confuse the new search with
+            # the old candidates.
+            if (
+                WorkflowState(session.workflow_state) is WorkflowState.AWAITING_CAR
+                and session.pending_disambiguation
+            ):
+                session = self.session_service.clear_pending_disambiguation(session)
+
             conversation_context: str | None = None
             if WorkflowState(session.workflow_state) is WorkflowState.AWAITING_CAR:
                 recent_messages = session.conversation_history[-4:]
@@ -462,6 +495,40 @@ class HandleUserMessageUseCase:
             requires_input=True,
         )
 
+    # ------------------------------------------------------------------
+    # Vague / question detection for disambiguation guard
+    # ------------------------------------------------------------------
+
+    _QUESTION_RE = __import__("re").compile(
+        r"(?i)^(what|how|which|why|where|when|who|is there|are there|can you|could you|"  
+        r"tell me|show me|do you|does it|does the|is the|how much|how many|"  
+        r"what is|what's|what are|what does|what do)"
+    )
+    _VAGUE_RE = __import__("re").compile(
+        r"(?i)\b(that car|this car|that one|this one|the one|go with|"  
+        r"i('ll| will) take|i('ll| will) go with|i want that|i'll have that|"  
+        r"let('s| us) go with|pick that)\b"
+    )
+    _SELECTION_RE = __import__("re").compile(
+        r"(?i)\b(first|second|third|fourth|fifth|option|pick|number|#)\b"
+    )
+
+    @classmethod
+    def _is_vague_or_question(cls, text: str) -> bool:
+        """Return True when the message is a question or a vague reference
+        that should NOT be forwarded to the car-extraction LLM during a
+        pending disambiguation.
+
+        Any message that starts with a question word is treated as a question
+        regardless of positional references like "first" or "second".
+        """
+        t = text.strip()
+        if cls._VAGUE_RE.search(t):
+            return True
+        if cls._QUESTION_RE.search(t):
+            return True
+        return False
+
     @staticmethod
     def _format_recent_history(session: SessionRecord, max_turns: int = 6) -> str:
         """Format the most recent conversation turns for the LLM context.
@@ -557,10 +624,25 @@ class HandleUserMessageUseCase:
                     car_repo = self.lookup_car.car_repo  # same repo instance
                     car = car_repo.get_by_id(session.selected_car_id)
                     if car and car.dealer_id:
-                        dealer_id = car.dealer_id
-                        session = self.session_service.set_selected_dealer(
-                            session, dealer_id
-                        )
+                        try:
+                            dealer = self.get_dealer_details.dealer_repo.get_by_id(
+                                car.dealer_id
+                            )
+                            if dealer:
+                                dealer_id = car.dealer_id
+                                session = self.session_service.set_selected_dealer(
+                                    session, dealer_id
+                                )
+                            else:
+                                logger.debug(
+                                    "Fallback dealer %s not found in repo",
+                                    car.dealer_id,
+                                )
+                        except Exception:
+                            logger.debug(
+                                "Fallback dealer %s not found",
+                                car.dealer_id,
+                            )
                 except Exception as exc:
                     logger.debug("Fallback dealer lookup failed: %s", exc)
 
