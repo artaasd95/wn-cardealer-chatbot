@@ -72,6 +72,7 @@ class SessionService:
             conversation_history=snapshot.conversation_history,
             scheduling_context=snapshot.scheduling_context,
             seen_cars=snapshot.seen_cars,
+            pending_disambiguation=snapshot.pending_disambiguation,
             expires_at=snapshot.expires_at
             or (datetime.now(UTC) + timedelta(seconds=_DEFAULT_TTL_SECONDS)),
         )
@@ -156,6 +157,79 @@ class SessionService:
 
         return record
 
+    def set_pending_disambiguation(
+        self, record: SessionRecord, candidates: list[dict]
+    ) -> SessionRecord:
+        """Store the list of candidate cars for a disambiguation prompt.
+
+        Args:
+            record: Current session.
+            candidates: List of car dicts with car_id, make, model, variant, year.
+
+        Returns:
+            Updated SessionRecord.
+        """
+        record.pending_disambiguation = candidates
+        record.updated_at = datetime.now(UTC)
+        return record
+
+    def resolve_disambiguation(
+        self, record: SessionRecord, user_text: str
+    ) -> tuple[dict | None, int | None]:
+        """Try to resolve a positional reference against pending candidates.
+
+        Recognises patterns like "second option", "option 2", "the first one",
+        "3", "number three", etc.
+
+        Returns:
+            Tuple of (matched candidate dict, 1-based index) or (None, None).
+        """
+        import re
+
+        if not record.pending_disambiguation:
+            return None, None
+
+        text = user_text.strip().lower()
+        n = len(record.pending_disambiguation)
+
+        # Word→number map
+        _words = {
+            "first": 1, "second": 2, "third": 3, "fourth": 4, "fifth": 5,
+            "sixth": 6, "seventh": 7, "eighth": 8, "ninth": 9, "tenth": 10,
+            "one": 1, "two": 2, "three": 3, "four": 4, "five": 5,
+            "six": 6, "seven": 7, "eight": 8, "nine": 9, "ten": 10,
+        }
+
+        idx: int | None = None
+
+        # "option N", "option Nth", "pick N", "number N"
+        m = re.search(r"(?:option|pick|number|#)\s*(\d+|one|two|three|four|five|six|seven|eight|nine|ten|first|second|third|fourth|fifth)", text)
+        if m:
+            token = m.group(1)
+            idx = _words.get(token) or (int(token) if token.isdigit() else None)
+
+        # "Nth option" / "N option"
+        if idx is None:
+            m = re.search(r"(\d+|one|two|three|four|five|six|seven|eight|nine|ten|first|second|third|fourth|fifth)\s*(?:option|one)?", text)
+            if m:
+                token = m.group(1)
+                idx = _words.get(token) or (int(token) if token.isdigit() else None)
+
+        # Bare number
+        if idx is None and text.isdigit():
+            idx = int(text)
+
+        if idx is not None and 1 <= idx <= n:
+            return record.pending_disambiguation[idx - 1], idx
+
+        return None, None
+
+    def clear_pending_disambiguation(self, record: SessionRecord) -> SessionRecord:
+        """Clear the pending disambiguation list after a selection is made."""
+        record.pending_disambiguation = []
+        record.updated_at = datetime.now(UTC)
+        return record
+
     def reset(self, record: SessionRecord) -> SessionRecord:
         """Reset a session to the START state (restart conversation).
 
@@ -168,6 +242,7 @@ class SessionService:
         record.workflow_state = WorkflowState.START.value
         record.selected_car_id = None
         record.selected_dealer_id = None
+        record.pending_disambiguation = []
         record.conversation_history = []
         record.updated_at = datetime.now(UTC)
 

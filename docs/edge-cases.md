@@ -36,6 +36,7 @@ See also:
 | Unrelated question | Decline gracefully and steer back to supported tasks | [edge_06_unrelated_question](../tests/scenarios/edge/06_unrelated_question.json) |
 | Car not found | Return a not-found branch, not an exception | [edge_07_car_not_found](../tests/scenarios/edge/07_car_not_found.json) |
 | Multiple cars match | Return disambiguation candidates | [edge_08_multiple_matches](../tests/scenarios/edge/08_multiple_matches.json) |
+| Positional disambiguation pick | Resolve "second option", "option 3", etc. against stored candidates | [edge_08_multiple_matches](../tests/scenarios/edge/08_multiple_matches.json) |
 | Make-only query | Return either a safe disambiguation or a valid match | [edge_09_partial_criteria](../tests/scenarios/edge/09_partial_criteria.json) |
 | Model-only query | Return either a safe disambiguation or a valid match | [edge_09_partial_criteria](../tests/scenarios/edge/09_partial_criteria.json) |
 | Variant-only query | Return either a safe disambiguation or a valid match | [edge_09_partial_criteria](../tests/scenarios/edge/09_partial_criteria.json) |

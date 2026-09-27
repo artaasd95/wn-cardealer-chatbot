@@ -28,17 +28,23 @@ class SelectTaskUseCase:
         """
         self.llm = llm
 
-    def execute(self, user_message: str, current_state: WorkflowState) -> TaskType:
+    def execute(
+        self,
+        user_message: str,
+        current_state: WorkflowState,
+        conversation_history: str = "",
+    ) -> TaskType:
         """Extract intent and route to a task.
 
         Args:
             user_message: The user's input.
             current_state: The current workflow state.
+            conversation_history: Optional recent conversation context.
 
         Returns:
             The task type to execute (or UNKNOWN if routing fails).
         """
-        prompt = build_intent_prompt(user_message)
+        prompt = build_intent_prompt(user_message, conversation_history)
 
         decision = self.llm.structured_completion(prompt, TaskDecision)
 

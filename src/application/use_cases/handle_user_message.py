@@ -204,9 +204,22 @@ class HandleUserMessageUseCase:
             # Step 2: Append user message to history
             session = self.session_service.append_message(session, "user", request.message)
 
-            # Step 3: Select task
+            # Step 2b: Check for disambiguation pick BEFORE intent classification.
+            # If we showed a list of cars and the user references one by position
+            # ("second option", "option 3", etc.), resolve it immediately.
+            candidate, _idx = self.session_service.resolve_disambiguation(
+                session, request.message
+            )
+            if candidate:
+                return self._handle_disambiguation_pick(candidate, session)
+
+            # Step 3: Select task — pass recent conversation history so the
+            # LLM can interpret contextual requests like "show me dealer details"
             current_state = WorkflowState(session.workflow_state)
-            task_type = self.select_task.execute(request.message, current_state)
+            recent_history = self._format_recent_history(session)
+            task_type = self.select_task.execute(
+                request.message, current_state, recent_history
+            )
 
             # Step 4: Dispatch to task
             reply = "I'm not sure how to help with that."
@@ -308,8 +321,21 @@ class HandleUserMessageUseCase:
                 session = self.session_service.add_seen_car(
                     session, car.car_id, car.make, car.model, car.variant, car.year
                 )
+                # Clear any pending disambiguation since a car was found directly.
+                session = self.session_service.clear_pending_disambiguation(session)
+                # Always try to assign a dealer — use the one from lookup_car
+                # or fall back to loading it from the repo directly.
                 if dealer:
                     session = self.session_service.set_selected_dealer(session, dealer.dealer_id)
+                elif car.dealer_id:
+                    try:
+                        fallback = self.lookup_car.dealer_repo.get_by_id(car.dealer_id)
+                        if fallback:
+                            session = self.session_service.set_selected_dealer(
+                                session, fallback.dealer_id
+                            )
+                    except Exception as exc:
+                        logger.debug("Fallback dealer load failed: %s", exc)
 
                 summary = _car_summary(car)
                 variant = f" {summary.variant}" if summary.variant else ""
@@ -325,6 +351,7 @@ class HandleUserMessageUseCase:
             if result.status == "multiple":
                 # Disambiguation branch: DTO candidates become clickable options.
                 candidates = [_car_summary(c) for c in (result.candidates or result.cars)]
+                candidate_dicts = []
                 for raw_car in result.candidates or result.cars:
                     session = self.session_service.add_seen_car(
                         session,
@@ -334,6 +361,18 @@ class HandleUserMessageUseCase:
                         raw_car.variant,
                         raw_car.year,
                     )
+                    candidate_dicts.append({
+                        "car_id": raw_car.car_id,
+                        "make": raw_car.make,
+                        "model": raw_car.model,
+                        "variant": raw_car.variant or "",
+                        "year": raw_car.year,
+                        "dealer_id": raw_car.dealer_id,
+                    })
+                # Store candidates so positional picks ("second option") resolve.
+                session = self.session_service.set_pending_disambiguation(
+                    session, candidate_dicts
+                )
                 options = CarCandidateList(
                     candidates=candidates,
                     message="Which of these did you mean?",
@@ -345,7 +384,7 @@ class HandleUserMessageUseCase:
                     + " Pick one: "
                     + "; ".join(labels)
                 )
-                return reply, next_state, session, labels
+                return reply, WorkflowState.AWAITING_CAR, session, labels
 
             # not_found branch: fallback message, not an exception
             clarification = ClarificationMessage(
@@ -360,6 +399,88 @@ class HandleUserMessageUseCase:
         except Exception as e:
             logger.error(f"Item lookup failed: {str(e)}")
             return f"Car search failed: {str(e)}", WorkflowState.AWAITING_CAR, session, None
+
+    def _handle_disambiguation_pick(
+        self, candidate: dict, session: SessionRecord
+    ) -> ChatResponse:
+        """Handle a positional pick from a disambiguation list.
+
+        Resolves the selected car and dealer, updates the session, and
+        returns a ChatResponse — bypassing the LLM entirely for speed.
+
+        Args:
+            candidate: The matched car dict from pending_disambiguation.
+            session: Current session record.
+
+        Returns:
+            A full ChatResponse with the car summary, dealer info, and
+            suggested next actions.
+        """
+        car_id = candidate["car_id"]
+        make = candidate.get("make", "")
+        model = candidate.get("model", "")
+        variant = candidate.get("variant", "")
+        year = candidate.get("year", "")
+        dealer_id = candidate.get("dealer_id")
+
+        # Set selected car and dealer on the session.
+        session = self.session_service.set_selected_car(session, car_id)
+        if dealer_id:
+            session = self.session_service.set_selected_dealer(session, dealer_id)
+            session.selected_dealer_id = dealer_id
+        session = self.session_service.clear_pending_disambiguation(session)
+
+        variant_str = f" {variant}" if variant else ""
+        reply = (
+            f"Great choice! You've selected the {make} {model}{variant_str} ({year})."
+        )
+
+        # Try to load dealer details if available.
+        dealer = None
+        if dealer_id:
+            try:
+                dealer = self.get_dealer_details.execute(dealer_id)[0]
+            except Exception:
+                pass
+        if dealer:
+            reply += f" {dealer.dealer_name} in {dealer.city} can help you with it."
+        reply += " Would you like dealer details or to schedule a call?"
+
+        # Advance to AWAITING_ACTION.
+        session = self.session_service.advance_through(
+            session, WorkflowState.AWAITING_ACTION
+        )
+        session = self.session_service.append_message(session, "assistant", reply)
+        self.session_service.persist(session)
+
+        state = WorkflowState(session.workflow_state)
+        return ChatResponse(
+            session_id=session.session_id,
+            reply=reply,
+            workflow_state=session.workflow_state,
+            suggested_actions=suggest_next_tasks(state),
+            requires_input=True,
+        )
+
+    @staticmethod
+    def _format_recent_history(session: SessionRecord, max_turns: int = 6) -> str:
+        """Format the most recent conversation turns for the LLM context.
+
+        Args:
+            session: The current session record.
+            max_turns: Maximum number of recent messages to include.
+
+        Returns:
+            A formatted string of recent messages, or empty string if none.
+        """
+        messages = session.conversation_history[-max_turns:]
+        if not messages:
+            return ""
+        lines = []
+        for msg in messages:
+            role = "User" if msg.role == "user" else "Assistant"
+            lines.append(f"{role}: {msg.content}")
+        return "\n".join(lines)
 
     def _handle_greeting(self, session: SessionRecord) -> tuple[str, WorkflowState]:
         """Return a friendly welcome; stay at the current workflow state."""
@@ -411,6 +532,9 @@ class HandleUserMessageUseCase:
     def _handle_dealer_details(self, session: SessionRecord) -> tuple[str, WorkflowState]:
         """Handle dealer details task.
 
+        Falls back to loading the dealer from the selected car if no dealer
+        was explicitly stored (e.g. the initial lookup failed silently).
+
         Args:
             session: Current session record.
 
@@ -418,7 +542,33 @@ class HandleUserMessageUseCase:
             Tuple of (reply, next state).
         """
         try:
-            dealer_id = self.session_service.require_selected_dealer(session)
+            # Try the stored dealer first.
+            dealer_id: str | None = None
+            try:
+                dealer_id = self.session_service.require_selected_dealer(session)
+            except DomainError:
+                pass
+
+            # Fallback: load the dealer via the selected car.
+            if not dealer_id and session.selected_car_id:
+                try:
+                    from ports.repositories.car_repository import CarRepository
+
+                    car_repo = self.lookup_car.car_repo  # same repo instance
+                    car = car_repo.get_by_id(session.selected_car_id)
+                    if car and car.dealer_id:
+                        dealer_id = car.dealer_id
+                        session = self.session_service.set_selected_dealer(
+                            session, dealer_id
+                        )
+                except Exception as exc:
+                    logger.debug("Fallback dealer lookup failed: %s", exc)
+
+            if not dealer_id:
+                raise DomainError(
+                    "No dealer selected. Please search for and select a car first."
+                )
+
             dealer, next_state = self.get_dealer_details.execute(dealer_id)
 
             if not dealer:

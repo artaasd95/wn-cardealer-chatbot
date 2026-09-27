@@ -52,6 +52,7 @@ class InMemorySessionStore(SessionStore):
             conversation_history=record.conversation_history,
             scheduling_context=record.scheduling_context,
             seen_cars=record.seen_cars,
+            pending_disambiguation=record.pending_disambiguation,
             expires_at=record.expires_at,
         )
 

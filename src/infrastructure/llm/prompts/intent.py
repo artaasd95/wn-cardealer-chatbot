@@ -11,15 +11,23 @@ from domain.enums.task_type import TaskType
 from models.inputs.task import TaskDecision
 
 
-def build_intent_prompt(user_message: str) -> str:
+def build_intent_prompt(user_message: str, conversation_history: str = "") -> str:
     """Build the intent extraction prompt.
 
     Args:
         user_message: The raw user input to classify.
+        conversation_history: Optional recent conversation context.
 
     Returns:
         The full prompt text sent to the LLM.
     """
+    history_block = ""
+    if conversation_history:
+        history_block = f"""
+
+Recent conversation:
+{conversation_history}
+"""
     return f"""You are a task router for a car dealer chatbot.
 Classify the user's input into exactly one of these tasks:
 
@@ -46,7 +54,7 @@ Classify this message. Return JSON with:
 - task_type: One of {[t.value for t in TaskType]}
 - confidence: Float 0.0–1.0 (1.0 = certain)
 - reason: Brief explanation
-
+{history_block}
 User message: "{user_message}"
 
 Respond with JSON only."""

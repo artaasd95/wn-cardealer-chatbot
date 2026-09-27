@@ -48,6 +48,10 @@ class SessionRecord(BaseModel):
         default_factory=list,
         description="Compact records of cars shown to the user this session.",
     )
+    pending_disambiguation: list[dict[str, str | int | None]] = Field(
+        default_factory=list,
+        description="Candidate cars shown in the last disambiguation prompt.",
+    )
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(UTC).replace(tzinfo=None),
         description="When session was created.",
@@ -74,6 +78,10 @@ class SessionSnapshotRecord(BaseModel):
     seen_cars: list[dict[str, str | int | None]] = Field(
         default_factory=list,
         description="Compact records of cars shown to the user this session.",
+    )
+    pending_disambiguation: list[dict[str, str | int | None]] = Field(
+        default_factory=list,
+        description="Candidate cars shown in the last disambiguation prompt.",
     )
     user_id: str | None = None
     expires_at: datetime | None = None

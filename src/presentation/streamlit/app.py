@@ -114,15 +114,15 @@ def check_api_health() -> bool:
     return False
 
 
-def send_message(user_input: str) -> tuple[str, str, list[str]]:
+def send_message(user_input: str) -> tuple[str, str, str, list[str]]:
     """Send a message to the chat API.
 
     Args:
         user_input: The user's message.
 
     Returns:
-        Tuple of (reply, workflow_state, suggested_actions); on failure the
-        actions list is empty.
+        Tuple of (reply, workflow_state, session_id, suggested_actions);
+        on failure the session_id is the current one and actions list is empty.
     """
     try:
         # Configurable timeout to allow the backend to complete LLM-backed turns.
@@ -141,25 +141,29 @@ def send_message(user_input: str) -> tuple[str, str, list[str]]:
         if response.status_code == 200:
             data = response.json()
             actions = data.get("suggested_actions") or []
-            return data["reply"], data["workflow_state"], list(actions)
+            # Use the server-returned session_id so subsequent turns
+            # continue the same conversation.
+            returned_session_id = data.get("session_id", st.session_state.session_id)
+            return data["reply"], data["workflow_state"], returned_session_id, list(actions)
 
         try:
             error_detail = response.json().get("detail", "Unknown error")
         except Exception:
             error_detail = response.text or "Unknown error"
-        return f"Error: {error_detail}", "ERROR", []
+        return f"Error: {error_detail}", "ERROR", st.session_state.session_id, []
 
     except requests.exceptions.ConnectionError:
-        return "Unable to connect to API. Is the server running?", "ERROR", []
+        return "Unable to connect to API. Is the server running?", "ERROR", st.session_state.session_id, []
     except requests.exceptions.Timeout:
         return (
             "API request timed out. The backend may be busy — please wait a moment and try again.",
             "ERROR",
+            st.session_state.session_id,
             [],
         )
     except Exception as e:
         logger.error(f"Failed to send message: {str(e)}")
-        return f"Error: {str(e)}", "ERROR", []
+        return f"Error: {str(e)}", "ERROR", st.session_state.session_id, []
 
 
 def reset_session() -> None:
@@ -262,7 +266,12 @@ def main() -> None:
 
         # Get response
         with st.spinner("Thinking..."):
-            reply, new_state, suggestions = send_message(pending)
+            reply, new_state, returned_session_id, suggestions = send_message(pending)
+
+        # Persist the server-returned session_id so subsequent turns
+        # continue the same conversation (the server may have created a
+        # new session if ours was unknown or expired).
+        st.session_state.session_id = returned_session_id
 
         # Display assistant response
         with st.chat_message("assistant"):
