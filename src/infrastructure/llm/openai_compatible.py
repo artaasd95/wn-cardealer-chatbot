@@ -13,7 +13,8 @@ The adapter handles:
 from __future__ import annotations
 
 import logging
-from time import perf_counter
+import re
+from time import perf_counter, sleep
 from typing import Any, TypeVar, cast
 
 from openai import APIConnectionError, APIStatusError, APITimeoutError, OpenAI
@@ -40,6 +41,19 @@ class OpenAICompatibleClient(LLMPort):
     - vLLM (self-hosted)
     - LM Studio (localhost:1234)
     """
+
+    @staticmethod
+    def _strip_markdown_fences(text: str) -> str:
+        """Strip markdown code fences (```json ... ```) from LLM responses.
+
+        Some models wrap JSON output in markdown fences even when asked to
+        return raw JSON. This extracts the inner content.
+        """
+        pattern = r"```(?:json)?\s*\n?(.*?)\n?\s*```"
+        match = re.search(pattern, text, re.DOTALL)
+        if match:
+            return match.group(1).strip()
+        return text.strip()
 
     def __init__(self, settings: LLMSettings) -> None:
         """Initialize the client with validated settings.
@@ -127,6 +141,7 @@ class OpenAICompatibleClient(LLMPort):
 
             try:
                 content = response.choices[0].message.content or ""
+                content = self._strip_markdown_fences(content)
                 parsed = output_type.model_validate_json(content)
                 elapsed_ms = (perf_counter() - started_at) * 1000
                 logger.info(
