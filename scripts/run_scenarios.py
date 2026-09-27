@@ -59,11 +59,13 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import sys
+import time
 import urllib.error
 import urllib.request
-from collections.abc import Callable, Iterable, Sequence
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -150,6 +152,7 @@ class StepResult:
     request: Request
     response: Response | None
     failures: list[str] = field(default_factory=list)
+    elapsed_ms: float | None = None
 
     @property
     def passed(self) -> bool:
@@ -164,6 +167,30 @@ class ScenarioResult:
     scenario: Scenario
     steps: list[StepResult] = field(default_factory=list)
     error: str | None = None
+
+    def to_json(self) -> dict[str, Any]:
+        """Serialize the result to a dictionary for logging."""
+        return {
+            "scenario_id": self.scenario.scenario_id,
+            "title": self.scenario.title,
+            "passed": self.passed,
+            "error": self.error,
+            "steps": [
+                {
+                    "name": s.step.name,
+                    "request": s.request.to_json(),
+                    "response": {
+                        "status": s.response.status,
+                        "body": s.response.body,
+                    }
+                    if s.response
+                    else None,
+                    "failures": s.failures,
+                    "elapsed_ms": round(s.elapsed_ms, 1) if s.elapsed_ms is not None else None,
+                }
+                for s in self.steps
+            ],
+        }
 
     @property
     def passed(self) -> bool:
@@ -439,141 +466,171 @@ def build_request(step: Step, session_id: str | None) -> Request:
     return Request(method=step.method, path=path, body=body if isinstance(body, dict) else None)
 
 
+def run_step(
+    send: SendFn,
+    step: Step,
+    session_id: str | None,
+    prepare: PrepareFn | None = None,
+) -> StepResult:
+    """Execute a single step of a scenario.
+
+    Args:
+        send: Callable that sends a ``Request`` and returns a ``Response``.
+        step: The scenario step to execute.
+        session_id: Session id captured from earlier responses (``None`` for
+            the first step of a fresh session).
+        prepare: Optional callback invoked before the request is built, used
+            by the pytest bridge to load scripted LLM answers.
+
+    Returns:
+        The outcome of this step including failures.
+    """
+    if prepare is not None:
+        prepare(step)
+
+    request = build_request(step, session_id)
+    start = time.monotonic()
+
+    try:
+        response = send(request)
+    except Exception as exc:
+        elapsed_ms = (time.monotonic() - start) * 1000
+        return StepResult(step, request, None, [str(exc)], elapsed_ms=elapsed_ms)
+
+    elapsed_ms = (time.monotonic() - start) * 1000
+
+    # Substitute $session placeholders in expect before evaluating.
+    resolved_expect: dict[str, Any] = _substitute(step.expect, session_id)
+    failures = evaluate_expect(resolved_expect, response)
+    return StepResult(step, request, response, failures, elapsed_ms=elapsed_ms)
+
+
 def run_scenario(
     scenario: Scenario,
     send: SendFn,
     prepare: PrepareFn | None = None,
 ) -> ScenarioResult:
-    """Run one scenario against a sender.
+    """Run a full scenario, step by step.
 
     Args:
-        scenario: The scenario to run.
-        send: Callable taking a Request and returning a Response.
-        prepare: Optional hook invoked with each Step before it is sent
-            (used by the pytest bridge to load the ``llm`` hints).
+        scenario: The loaded scenario.
+        send: Callable that sends a ``Request`` and returns a ``Response``.
+        prepare: Optional per-step callback (used by the pytest bridge to
+            enqueue scripted LLM answers before each request).
 
     Returns:
-        The ScenarioResult with one StepResult per step.
+        The aggregated result with per-step outcomes.
     """
-    result = ScenarioResult(scenario=scenario)
+    step_results: list[StepResult] = []
     session_id: str | None = None
 
     for step in scenario.steps:
-        request = build_request(step, session_id)
-        if prepare is not None:
-            prepare(step)
+        result = run_step(send, step, session_id, prepare)
+        step_results.append(result)
 
-        try:
-            response = send(request)
-        except Exception as exc:  # noqa: BLE001 - report and move on
-            result.error = f"send failed: {exc}"
-            result.steps.append(
-                StepResult(
-                    step=step, request=request, response=None, failures=[f"send failed: {exc}"]
-                )
-            )
-            return result
+        # Capture session id from the response so later steps can reference it.
+        if result.response is not None and isinstance(result.response.body, dict):
+            captured = result.response.body.get("session_id")
+            if isinstance(captured, str) and captured:
+                session_id = captured
 
-        # Expectations may reference the captured session id ("$session"), so
-        # continuity can be asserted with {"equals": "$session"}.
-        failures = evaluate_expect(_substitute(step.expect, session_id), response)
-        result.steps.append(
-            StepResult(step=step, request=request, response=response, failures=failures)
-        )
+        if not result.passed:
+            break
 
-        if isinstance(response.body, dict) and response.body.get("session_id"):
-            session_id = str(response.body["session_id"])
-
-    return result
+    return ScenarioResult(scenario, steps=step_results)
 
 
-def http_sender(base_url: str, timeout: float) -> SendFn:
-    """Build a sender that talks to a live API over HTTP.
+# ---------------------------------------------------------------------------
+# HTTP send factory
+# ---------------------------------------------------------------------------
+
+
+def _make_http_send(base_url: str, timeout: float) -> SendFn:
+    """Build a ``SendFn`` that sends requests over HTTP with urllib.
 
     Args:
-        base_url: Base URL of the API (e.g. http://127.0.0.1:8000).
+        base_url: API origin (e.g. ``http://127.0.0.1:8000``).
         timeout: Per-request timeout in seconds.
 
     Returns:
-        A SendFn performing real HTTP requests.
+        A callable matching the ``SendFn`` protocol.
     """
 
-    def _send(request: Request) -> Response:
-        url = base_url.rstrip("/") + request.path
-        data = json.dumps(request.body).encode("utf-8") if request.body is not None else None
-        headers = {"Content-Type": "application/json", "Accept": "application/json"}
-        http_request = urllib.request.Request(
-            url, data=data, headers=headers, method=request.method
+    def send(request: Request) -> Response:
+        url = f"{base_url.rstrip('/')}{request.path}"
+        data: bytes | None = None
+        headers: dict[str, str] = {}
+        if request.body is not None:
+            data = json.dumps(request.body).encode()
+            headers["Content-Type"] = "application/json"
+        req = urllib.request.Request(
+            url,
+            data=data,
+            headers=headers,
+            method=request.method,
         )
-
         try:
-            with urllib.request.urlopen(http_request, timeout=timeout) as raw:  # noqa: S310
-                status = raw.status
-                payload = raw.read().decode("utf-8")
-        except urllib.error.HTTPError as exc:
-            status = exc.code
-            payload = exc.read().decode("utf-8")
+            with urllib.request.urlopen(req, timeout=timeout) as resp:
+                raw = resp.read().decode("utf-8")
+                body: Any = json.loads(raw) if raw.strip() else None
+                return Response(status=resp.status, body=body)
+        except urllib.error.HTTPError as e:
+            raw = e.read().decode("utf-8", errors="replace")
+            try:
+                body = json.loads(raw)
+            except (ValueError, UnicodeDecodeError):
+                body = raw
+            return Response(status=e.code, body=body)
+        except urllib.error.URLError as e:
+            raise ConnectionError(f"Cannot reach {url}: {e.reason}") from e
 
-        body: Any
-        try:
-            body = json.loads(payload) if payload else None
-        except json.JSONDecodeError:
-            body = payload
-        return Response(status=status, body=body)
-
-    return _send
+    return send
 
 
 # ---------------------------------------------------------------------------
-# Reporting
+# Default report path and env helpers
 # ---------------------------------------------------------------------------
 
 
-def scenario_report(result: ScenarioResult, verbose: bool = False) -> str:
-    """Render one scenario result as printable lines.
-
-    Args:
-        result: The scenario result.
-        verbose: Include the resolved request/response payloads.
+def _default_report_path() -> Path:
+    """Build the default timestamped report path under logs/scenario_runs/.
 
     Returns:
-        Multi-line report text.
+        Path like ``logs/scenario_runs/run_20260927_143000.json``.
     """
-    status = "PASS" if result.passed else "FAIL"
-    lines = [f"[{status}] {result.scenario.scenario_id} — {result.scenario.title}"]
+    from datetime import datetime as _dt
 
-    if result.error:
-        lines.append(f"    error: {result.error}")
-
-    for step_result in result.steps:
-        mark = "ok" if step_result.passed else "FAIL"
-        response = step_result.response
-        code = response.status if response else "no response"
-        lines.append(f"    [{mark}] {step_result.step.name} -> {code}")
-        for failure in step_result.failures:
-            lines.append(f"        {failure}")
-        if verbose and response is not None:
-            lines.append(f"        request:  {json.dumps(step_result.request.to_json())}")
-            lines.append(f"        response: {json.dumps(response.body)}")
-    return "\n".join(lines)
+    ts = _dt.now().strftime("%Y%m%d_%H%M%S")
+    report_dir = REPO_ROOT / "logs" / "scenario_runs"
+    report_dir.mkdir(parents=True, exist_ok=True)
+    return report_dir / f"run_{ts}.json"
 
 
-def summary_report(results: Iterable[ScenarioResult]) -> str:
-    """Render the final summary table.
+def _read_env_timeout() -> float:
+    """Read APP_REQUEST_TIMEOUT_SECONDS from the environment or .env file.
 
-    Args:
-        results: All scenario results.
+    The runner does not depend on pydantic-settings, so it reads the value
+    directly.  If the variable is not exported, it falls back to parsing
+    ``.env`` at the repository root.  Returns 60 when nothing is found.
 
     Returns:
-        Multi-line summary text.
+        The timeout in seconds (minimum 30).
     """
-    results = list(results)
-    passed = sum(1 for result in results if result.passed)
-    failed = [result for result in results if not result.passed]
-    lines = [f"\n{passed}/{len(results)} scenarios passed"]
-    for result in failed:
-        lines.append(f"  FAILED: {result.scenario.scenario_id}")
-    return "\n".join(lines)
+    raw = os.environ.get("APP_REQUEST_TIMEOUT_SECONDS")
+    if raw is None:
+        env_path = REPO_ROOT / ".env"
+        if env_path.exists():
+            for line in env_path.read_text(encoding="utf-8").splitlines():
+                stripped = line.strip()
+                if stripped.startswith("APP_REQUEST_TIMEOUT_SECONDS="):
+                    raw = stripped.split("=", 1)[1].strip().strip('"').strip("'")
+                    break
+    if raw is None:
+        return 60.0
+    try:
+        return max(30.0, float(raw))
+    except ValueError:
+        return 60.0
 
 
 # ---------------------------------------------------------------------------
@@ -581,127 +638,206 @@ def summary_report(results: Iterable[ScenarioResult]) -> str:
 # ---------------------------------------------------------------------------
 
 
-def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
-    """Parse command-line arguments.
+def main() -> None:
+    """Entry point for the scenario runner CLI."""
+    # Ensure UTF-8 output so Unicode in scenario titles prints on Windows.
+    for stream_name in ("stdout", "stderr"):
+        stream = getattr(sys, stream_name)
+        if hasattr(stream, "reconfigure"):
+            stream.reconfigure(encoding="utf-8")
 
-    Args:
-        argv: Argument vector (defaults to sys.argv[1:]).
-
-    Returns:
-        The parsed namespace.
-    """
-    parser = argparse.ArgumentParser(description="Run chat API scenario payloads.")
-    parser.add_argument("--base-url", default="http://127.0.0.1:8000", help="API base URL")
-    parser.add_argument("--suite", choices=[*SUITES, "all"], default="all", help="Scenario suite")
-    parser.add_argument("--scenario", help="Only run scenario ids containing this substring")
-    parser.add_argument(
-        "--tag", action="append", help="Only run scenarios carrying any of these tags"
-    )
-    parser.add_argument("--scenarios-dir", type=Path, default=DEFAULT_SCENARIOS_DIR)
-    parser.add_argument(
-        "--timeout", type=float, default=30.0, help="Per-request timeout in seconds"
+    parser = argparse.ArgumentParser(
+        description="Run chatbot scenarios against a live API.",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog=(
+            "Exit codes:  0 = all passed,  1 = failures,  2 = API unreachable\n\n"
+            "The timeout defaults to APP_REQUEST_TIMEOUT_SECONDS from .env (min 30s)."
+        ),
     )
     parser.add_argument(
-        "--dry-run", action="store_true", help="Print resolved requests, send nothing"
+        "--base-url",
+        default=os.environ.get("API_BASE_URL", "http://127.0.0.1:8000"),
+        help="Base URL of the API (default: API_BASE_URL env or http://127.0.0.1:8000)",
     )
-    parser.add_argument("--list", action="store_true", help="List matching scenarios and exit")
-    parser.add_argument("--verbose", action="store_true", help="Print requests and responses")
     parser.add_argument(
-        "--fail-fast", action="store_true", help="Stop after the first failing scenario"
+        "--suite",
+        choices=["normal", "edge", "all"],
+        default="all",
+        help="Which scenario suite to run",
     )
-    parser.add_argument("--json-report", type=Path, help="Write a machine-readable report here")
-    return parser.parse_args(argv)
+    parser.add_argument(
+        "--scenario",
+        help="Substring filter on scenario id",
+    )
+    parser.add_argument(
+        "--tag",
+        action="append",
+        default=[],
+        help="Only run scenarios carrying at least one of these tags (repeatable)",
+    )
+    parser.add_argument(
+        "--list",
+        action="store_true",
+        help="List available scenarios and exit",
+    )
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Resolve requests and print them without sending",
+    )
+    parser.add_argument(
+        "--verbose",
+        action="store_true",
+        help="Print every request and response during the run",
+    )
+    parser.add_argument(
+        "--json-report",
+        help="Write full JSON report to this path (default: logs/scenario_runs/<timestamp>.json)",
+    )
+    parser.add_argument(
+        "--timeout",
+        type=float,
+        default=None,
+        help="HTTP request timeout in seconds (default: APP_REQUEST_TIMEOUT_SECONDS from .env)",
+    )
 
+    args = parser.parse_args()
 
-def main(argv: Sequence[str] | None = None) -> int:
-    """Entry point.
+    tags: Sequence[str] | None = args.tag or None
+    scenarios = load_scenarios(
+        suite=args.suite,
+        scenario_filter=args.scenario,
+        tags=tags,
+    )
 
-    Args:
-        argv: Argument vector (defaults to sys.argv[1:]).
-
-    Returns:
-        Process exit code (0 pass, 1 failures, 2 unreachable).
-    """
-    args = parse_args(argv)
-
-    try:
-        scenarios = load_scenarios(args.scenarios_dir, args.suite, args.scenario, args.tag)
-    except Exception as exc:  # noqa: BLE001
-        print(f"could not load scenarios: {exc}", file=sys.stderr)
-        return 2
+    # --list: print scenario inventory and exit.
+    if args.list:
+        if not scenarios:
+            print("No scenarios matched.")
+            sys.exit(0)
+        for s in scenarios:
+            print(f"  {s.scenario_id:<50} {len(s.steps)} steps  [{s.title}]")
+        print(f"\n{len(scenarios)} scenario(s).")
+        sys.exit(0)
 
     if not scenarios:
-        print("no scenarios matched the filters")
-        return 2
+        print("No scenarios matched.", file=sys.stderr)
+        sys.exit(2)
 
-    if args.list:
-        for scenario in scenarios:
-            tags = f" [{', '.join(scenario.tags)}]" if scenario.tags else ""
-            print(f"{scenario.suite}/{scenario.scenario_id}{tags} — {scenario.title}")
-        return 0
-
+    # --dry-run: build requests and print without sending.
     if args.dry_run:
         for scenario in scenarios:
-            print(f"== {scenario.scenario_id} — {scenario.title}")
+            print(f"\n--- {scenario.scenario_id}: {scenario.title} ---")
+            session_id: str | None = None
             for step in scenario.steps:
-                request = build_request(step, "<session-id>")
-                print(f"   {json.dumps(request.to_json())}")
-        print(f"\n{len(scenarios)} scenarios ready to send (dry run)")
-        return 0
+                request = build_request(step, session_id)
+                print(f"  {request.method} {request.path}")
+                if request.body:
+                    print(f"  Body: {json.dumps(request.body, indent=4, ensure_ascii=False)}")
+                session_id = "dry-run-session"
+        sys.exit(0)
 
-    send = http_sender(args.base_url, args.timeout)
+    # Determine timeout: CLI flag > env/.env > default 60.
+    timeout = args.timeout if args.timeout is not None else _read_env_timeout()
+    timeout = max(30.0, timeout)
+
+    send = _make_http_send(args.base_url, timeout)
+
+    # Preflight: check API reachability.
+    try:
+        health_req = Request(method="GET", path="/api/health", body=None)
+        health_resp = send(health_req)
+        if health_resp.status >= 500:
+            print(
+                f"API health check returned {health_resp.status}.",
+                file=sys.stderr,
+            )
+            sys.exit(2)
+    except ConnectionError as exc:
+        print(f"API unreachable: {exc}", file=sys.stderr)
+        sys.exit(2)
+    except Exception as exc:
+        print(f"Preflight check failed: {exc}", file=sys.stderr)
+        sys.exit(2)
+
+    # Run scenarios.
     results: list[ScenarioResult] = []
-    unreachable = False
+    total_passed = 0
+    total_failed = 0
+    total_steps = 0
 
     for scenario in scenarios:
+        if args.verbose:
+            print(f"\n{'=' * 60}")
+            print(f"  {scenario.scenario_id}: {scenario.title}")
+            print(f"{'=' * 60}")
+
         result = run_scenario(scenario, send)
         results.append(result)
-        print(scenario_report(result, args.verbose))
-        if result.error:
-            unreachable = True
-            break
-        if not result.passed and args.fail_fast:
-            break
 
-    print(summary_report(results))
+        for sr in result.steps:
+            total_steps += 1
+            elapsed = f" ({sr.elapsed_ms:.0f}ms)" if sr.elapsed_ms is not None else ""
+            if args.verbose:
+                print(f"  [{sr.step.name}]")
+                print(f"    Request:  {sr.request.method} {sr.request.path}")
+                if sr.request.body:
+                    body_preview = json.dumps(sr.request.body, ensure_ascii=False)
+                    if len(body_preview) > 200:
+                        body_preview = body_preview[:200] + "..."
+                    print(f"    Body:     {body_preview}")
+                if sr.response is not None:
+                    resp_preview = json.dumps(sr.response.body, ensure_ascii=False)
+                    if len(resp_preview) > 300:
+                        resp_preview = resp_preview[:300] + "..."
+                    print(f"    Response: status={sr.response.status}{elapsed}")
+                    print(f"    Body:     {resp_preview}")
+                else:
+                    print(f"    Response: (none){elapsed}")
+                if sr.failures:
+                    for f in sr.failures:
+                        print(f"    FAIL:     {f}")
+                else:
+                    print("    PASS")
 
-    if args.json_report:
-        args.json_report.write_text(
-            json.dumps(
-                {
-                    "base_url": args.base_url,
-                    "passed": sum(1 for result in results if result.passed),
-                    "total": len(results),
-                    "scenarios": [
-                        {
-                            "id": result.scenario.scenario_id,
-                            "passed": result.passed,
-                            "steps": [
-                                {
-                                    "name": step.step.name,
-                                    "passed": step.passed,
-                                    "request": step.request.to_json(),
-                                    "status": step.response.status if step.response else None,
-                                    "failures": step.failures,
-                                }
-                                for step in result.steps
-                            ],
-                        }
-                        for result in results
-                    ],
-                },
-                indent=2,
-            ),
-            encoding="utf-8",
-        )
-        print(f"wrote {args.json_report}")
+        if result.passed:
+            total_passed += 1
+            status = "PASSED"
+        else:
+            total_failed += 1
+            status = "FAILED"
+            if not args.verbose:
+                for sr in result.steps:
+                    for f in sr.failures:
+                        print(f"  FAIL [{result.scenario.scenario_id}] {sr.step.name}: {f}")
 
-    if unreachable:
-        return 2
-    return 0 if all(result.passed for result in results) else 1
+        if not args.verbose:
+            print(f"  {status}  {result.scenario.scenario_id}  ({len(result.steps)} steps)")
+
+    # Always write a full report to a file.
+    report_path = Path(args.json_report) if args.json_report else _default_report_path()
+    report_path.parent.mkdir(parents=True, exist_ok=True)
+    report_data = {
+        "base_url": args.base_url,
+        "timeout": timeout,
+        "total_scenarios": len(results),
+        "passed": total_passed,
+        "failed": total_failed,
+        "scenarios": [r.to_json() for r in results],
+    }
+    report_path.write_text(
+        json.dumps(report_data, indent=2, ensure_ascii=False),
+        encoding="utf-8",
+    )
+    print(f"\nReport written to {report_path}")
+
+    # Summary.
+    print(f"\n{total_passed} passed, {total_failed} failed, {total_steps} steps total.")
+
+    if total_failed > 0:
+        sys.exit(1)
+    sys.exit(0)
 
 
 if __name__ == "__main__":
-    if __package__ in (None, ""):  # executed as `python scripts/run_scenarios.py`
-        sys.path.insert(0, str(REPO_ROOT))
-    raise SystemExit(main())
+    main()

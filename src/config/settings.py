@@ -117,6 +117,17 @@ class AppSettings(BaseSettings):
         default=None,
         description="Optional rotating log file path.",
     )
+    request_timeout_seconds: int = Field(
+        default=60,
+        ge=30,
+        description=(
+            "Main UI-to-API request timeout in seconds. This is the maximum time "
+            "Streamlit waits for a response from the FastAPI backend per chat "
+            "turn. Must be >= 30 to prevent disconnection during long LLM "
+            "processing (a single turn may call the LLM up to 3 times). "
+            "Should be larger than LLM_TIMEOUT_SECONDS."
+        ),
+    )
 
     @field_validator("log_level")
     @classmethod

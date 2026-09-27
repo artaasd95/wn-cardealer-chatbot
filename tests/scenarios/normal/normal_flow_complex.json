@@ -1,0 +1,138 @@
+{
+  "id": "normal_flow_complex",
+  "title": "Complex multi-stage flow: greeting \u2192 search \u2192 conversation \u2192 search \u2192 delayed selection \u2192 dealer \u2192 schedule",
+  "suite": "normal",
+  "description": "An eight-stage flow where the user explores multiple cars, asks contextual questions, then selects a car shown four messages earlier.  Matches the flow: greetings \u2192 car search \u2192 conversation \u2192 car search \u2192 conversation \u2192 selection (car from 4 messages ago) \u2192 dealer details \u2192 schedule.",
+  "plan_refs": ["plan.md \u00a72 main flows", "plan.md \u00a72 State transitions"],
+  "tags": ["greeting", "item_lookup", "conversation", "dealer_details", "schedule_call", "multi_stage", "happy_path"],
+  "steps": [
+    {
+      "name": "1. greeting",
+      "request": {"session_id": null, "message": "Hi there!", "user_id": "scenario-user"},
+      "llm": {"intent": "GREETING", "reply": ""},
+      "expect": {
+        "status": 200,
+        "body": {
+          "session_id": {"regex": "^[0-9a-fA-F-]{36}$"},
+          "workflow_state": {"equals": "START"},
+          "reply": {"all_of": [{"min_length": 1}]}
+        }
+      }
+    },
+    {
+      "name": "2. car search (BMW 3 Series \u2013 multiple matches)",
+      "request": {"session_id": "$session", "message": "Show me the BMW 3 Series options"},
+      "llm": {
+        "intent": "ITEM_LOOKUP",
+        "car": {"make": "BMW", "model": "3 Series"}
+      },
+      "expect": {
+        "status": 200,
+        "body": {
+          "session_id": {"equals": "$session"},
+          "workflow_state": {"equals": "AWAITING_CAR"},
+          "reply": {"all_of": [{"regex": "^I found several matches\\."}, {"regex": "Which of these did you mean"}]},
+          "suggested_actions": {"contains_all": ["320i \\(2021\\)"], "min_items": 2}
+        }
+      }
+    },
+    {
+      "name": "3. conversation (contextual question)",
+      "request": {"session_id": "$session", "message": "What is the mileage on the first one?"},
+      "llm": {
+        "intent": "CONVERSATION",
+        "reply": "The first one has 30,000 miles."
+      },
+      "expect": {
+        "status": 200,
+        "body": {
+          "session_id": {"equals": "$session"},
+          "workflow_state": {"equals": "AWAITING_CAR"},
+          "reply": {"min_length": 1, "max_length": 2000, "must_not": [{"regex": "(?i)(system prompt|You are a)"}]}
+        }
+      }
+    },
+    {
+      "name": "4. car search #2 (Audi A4 \u2013 multiple matches)",
+      "request": {"session_id": "$session", "message": "Also show me the Audi A4 options"},
+      "llm": {
+        "intent": "ITEM_LOOKUP",
+        "car": {"make": "Audi", "model": "A4"}
+      },
+      "expect": {
+        "status": 200,
+        "body": {
+          "session_id": {"equals": "$session"},
+          "workflow_state": {"equals": "AWAITING_CAR"},
+          "reply": {"all_of": [{"regex": "^I found several matches\\."}]},
+          "suggested_actions": {"contains_all": ["Audi A4"], "min_items": 2}
+        }
+      }
+    },
+    {
+      "name": "5. conversation (comparison question)",
+      "request": {"session_id": "$session", "message": "Which of the two Audis is cheaper?"},
+      "llm": {
+        "intent": "CONVERSATION",
+        "reply": "The 35 TFSI is the more affordable option."
+      },
+      "expect": {
+        "status": 200,
+        "body": {
+          "session_id": {"equals": "$session"},
+          "workflow_state": {"equals": "AWAITING_CAR"},
+          "reply": {"min_length": 1, "max_length": 2000}
+        }
+      }
+    },
+    {
+      "name": "6. selection (car from 4 messages ago)",
+      "request": {"session_id": "$session", "message": "Actually, I'll take the BMW 3 Series 320i 2021 you showed me at the start"},
+      "llm": {
+        "intent": "ITEM_LOOKUP",
+        "car": {"make": "BMW", "model": "3 Series", "variant": "320i", "year_from": 2021, "year_to": 2021}
+      },
+      "expect": {
+        "status": 200,
+        "body": {
+          "session_id": {"equals": "$session"},
+          "workflow_state": {"equals": "AWAITING_ACTION"},
+          "reply": {"regex": "^Found BMW 3 Series 320i \\(2021\\)"},
+          "suggested_actions": {"equals": ["Get dealer details", "Schedule a call", "Find another car"]}
+        }
+      }
+    },
+    {
+      "name": "7. dealer details",
+      "request": {"session_id": "$session", "message": "Now show me the dealer details"},
+      "llm": {"intent": "DEALER_DETAILS", "reply": ""},
+      "expect": {
+        "status": 200,
+        "body": {
+          "session_id": {"equals": "$session"},
+          "workflow_state": {"equals": "DEALER_DETAILS_SHOWN"},
+          "reply": {"all_of": [{"regex": "Prestige Cars"}, {"regex": "Bangalore"}, {"regex": "2552|phone|Phone"}], "must_not": [{"regex": "(?i)(system prompt|You are a)"}]},
+          "suggested_actions": {"equals": ["Schedule a call", "Find another car"]}
+        }
+      }
+    },
+    {
+      "name": "8. schedule a call",
+      "request": {"session_id": "$session", "message": "Please schedule a call for 2030-05-15 at 15:00 UTC"},
+      "llm": {
+        "intent": "SCHEDULE_CALL",
+        "schedule": {"date_raw": "2030-05-15", "time_raw": "15:00", "timezone": "UTC"},
+        "reply": ""
+      },
+      "expect": {
+        "status": 200,
+        "body": {
+          "session_id": {"equals": "$session"},
+          "workflow_state": {"equals": "SCHEDULE_CONFIRMED"},
+          "reply": {"all_of": [{"regex": "(?i)(book|schedul|confirm)"}, {"regex": "(?i)prestige cars"}, {"regex": "2552\\D{0,2}1003"}], "must_not": [{"regex": "(?i)(could not|failed)"}]},
+          "suggested_actions": {"equals": ["Find another car", "Get dealer details"]}
+        }
+      }
+    }
+  ]
+}

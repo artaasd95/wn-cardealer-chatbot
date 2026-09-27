@@ -125,7 +125,9 @@ def send_message(user_input: str) -> tuple[str, str, list[str]]:
         actions list is empty.
     """
     try:
-        # Increase timeout to allow the backend to complete LLM-backed turns
+        # Configurable timeout to allow the backend to complete LLM-backed turns.
+        # A single turn may call the LLM up to 3 times, so this must exceed
+        # LLM_TIMEOUT_SECONDS.  Set APP_REQUEST_TIMEOUT_SECONDS in .env.
         response = _requests_session.post(
             f"{API_BASE_URL}/api/chat",
             json={
@@ -133,7 +135,7 @@ def send_message(user_input: str) -> tuple[str, str, list[str]]:
                 "message": user_input,
                 "user_id": None,
             },
-            timeout=35,
+            timeout=_app_settings.request_timeout_seconds,
         )
 
         if response.status_code == 200:

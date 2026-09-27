@@ -112,6 +112,35 @@ match). Everything that is not a string is compared structurally.
 
 ---
 
+## Multi-stage flow scenarios
+
+Two scenario files model the full end-to-end conversations described in the
+project brief, including multiple stages that exercise the complete workflow:
+
+### Standard flow (`normal/normal_flow_standard.json`)
+
+```text
+greeting  →  car search (single match)  →  dealer details  →  schedule
+```
+
+Four stages: the user greets, searches for a specific car (BMW 3 Series 320i
+2021 → found → AWAITING_ACTION), views dealer details (Prestige Cars →
+DEALER_DETAILS_SHOWN), and schedules a call (→ SCHEDULE_CONFIRMED).
+
+### Complex flow (`normal/normal_flow_complex.json`)
+
+```text
+greeting  →  car search (multiple)  →  conversation  →  car search (multiple)
+  →  conversation  →  selection (car from 4 messages ago)  →  dealer details
+  →  schedule
+```
+
+Eight stages: the user explores BMW 3 Series and Audi A4 (both multiple
+matches), asks contextual questions, then selects the BMW from four messages
+earlier (the "delayed selection" pattern), views dealer details, and schedules.
+
+---
+
 ## Coverage map (plan.md §3 edge cases)
 
 | plan.md §3 case | Where it is covered |
@@ -175,11 +204,14 @@ match). Everything that is not a string is compared structurally.
 uvicorn src.presentation.api.main:app --port 8000
 
 # 2. run the payloads against it (terminal 2)
-python scripts/run_scenarios.py --list                 # what is there
-python scripts/run_scenarios.py --dry-run              # resolve requests, send nothing
-python scripts/run_scenarios.py                        # both suites
+python scripts/run_scenarios.py --list                              # inventory
+python scripts/run_scenarios.py --dry-run                           # resolve, send nothing
+python scripts/run_scenarios.py                                     # both suites
 python scripts/run_scenarios.py --suite edge --tag schedule_call --verbose
-python scripts/run_scenarios.py --json-report report.json
+python scripts/run_scenarios.py --json-report report.json           # custom report path
+python scripts/run_scenarios.py --timeout 90                        # override HTTP timeout
+
+# Response logs are always written to logs/scenario_runs/<timestamp>.json
 
 # or run the same files in-process with the scripted LLM
 pytest tests/integration/api/test_scenarios.py -q

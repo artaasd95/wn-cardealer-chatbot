@@ -96,8 +96,9 @@ copy .env.example .env
 | `LLM_API_KEY` | Provider or local-server token |
 | `LLM_MODEL` | Model name served by the endpoint |
 | `LLM_TEMPERATURE` | Kept at `0.0` for deterministic extraction |
-| `LLM_TIMEOUT_SECONDS` | Per-request timeout |
+| `LLM_TIMEOUT_SECONDS` | Per-request LLM timeout (default 30) |
 | `LLM_MAX_RETRIES` | Retry budget before fallback behavior |
+| `APP_REQUEST_TIMEOUT_SECONDS` | UI/API request timeout, minimum 30s (default 60) |
 | `APP_ENV` | Environment label |
 | `APP_HOST`, `APP_PORT` | API host and port |
 | `APP_LOG_LEVEL` | Project-wide log level |
@@ -107,6 +108,24 @@ copy .env.example .env
 
 The application validates configuration centrally at startup and fails fast on
 bad provider settings.
+
+### Timeouts and request delays
+
+Two timeout settings control how long the system waits before giving up:
+
+| Setting | Where it applies | Default | Minimum |
+| --- | --- | --- | --- |
+| `LLM_TIMEOUT_SECONDS` | Each individual LLM API call (intent, extraction, wording) | 30s | none |
+| `APP_REQUEST_TIMEOUT_SECONDS` | Streamlit → FastAPI HTTP request; scenario runner | 60s | 30s |
+
+A single chat turn may call the LLM up to three times (intent classification,
+entity extraction, response wording).  `APP_REQUEST_TIMEOUT_SECONDS` must be
+larger than `LLM_TIMEOUT_SECONDS` so the UI does not disconnect while the
+backend is still processing.  The minimum of 30s is enforced at startup — the
+application refuses to launch with a lower value.
+
+Both settings are read from `.env` (or environment variables) and documented in
+`.env.example`.
 
 ## Data Design
 
@@ -256,7 +275,10 @@ mypy src
 ## Scenario Testing
 
 The repository includes executable scenario payloads for both normal and edge
-cases.
+cases.  Multi-stage scenarios cover the full conversation flows:
+
+- **Standard flow** (`normal_flow_standard`): greeting → car search → dealer details → schedule
+- **Complex flow** (`normal_flow_complex`): greeting → search → conversation → search → conversation → selection (car from 4 messages ago) → dealer details → schedule
 
 ### List the available scenarios
 
@@ -276,11 +298,23 @@ python scripts/run_scenarios.py --dry-run
 python scripts/run_scenarios.py
 ```
 
+Full request/response logs are always written to `logs/scenario_runs/<timestamp>.json`.
+Use `--json-report path.json` to choose a different path.
+
 ### Run only edge-case scenarios
 
 ```bash
 python scripts/run_scenarios.py --suite edge
 python scripts/run_scenarios.py --suite edge --tag schedule_call --verbose
+```
+
+### Configure the scenario runner timeout
+
+The runner reads `APP_REQUEST_TIMEOUT_SECONDS` from `.env` (default 60, minimum
+30).  Override with `--timeout`:
+
+```bash
+python scripts/run_scenarios.py --timeout 90
 ```
 
 ### Run the same scenario files through pytest with a scripted fake LLM
